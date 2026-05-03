@@ -1,0 +1,27 @@
+name: gitleaks
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pull-requests: read
+concurrency:
+  group: gitleaks-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  scan:
+    name: scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # GITLEAKS_LICENSE only required for orgs with >25 contributors;
+          # safe to omit on personal repos.
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: false
