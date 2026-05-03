@@ -4,108 +4,143 @@ import {Buffer} from 'node:buffer';
 import process from 'node:process';
 import sharp from 'sharp';
 
-const inputImage = path.join(process.env.PWD ?? process.cwd(), 'raw', 'logo.png');
+const rawDir = path.join(process.env.PWD ?? process.cwd(), 'raw');
 const outputDir = path.join(process.env.PWD ?? process.cwd(), 'output');
 
+// High-quality source assets
+const srcWordmarkTrans = path.join(rawDir, 'logo.png');
+const srcLogomarkTrans = path.join(rawDir, 'logomark_color_bg2.png');
+const srcDarkBg = path.join(rawDir, 'wranngle_color_dark_bg.png');
+const srcLightBg = path.join(rawDir, 'wranngle_color_bg.png');
+
 const sizes = {
-	social: {width: 1200, height: 630},
-	square: {width: 1024, height: 1024},
-	favicon: [16, 32, 48, 192, 512],
+	favicon: [16, 32, 48, 180, 192, 512],
+	square: [64, 128, 256, 512, 1024],
+	wordmark: [512, 1024, 2048],
+	social: {
+		og: {width: 1200, height: 630},
+		linkedin: {width: 1200, height: 627},
+		twitter: {width: 1200, height: 600},
+		profile: {width: 400, height: 400},
+	},
 };
 
 async function ensureDir(dir: string) {
 	await fs.mkdir(dir, {recursive: true});
 }
 
-console.log('Generating logo variants...');
+console.log('Generating high-quality logo variants...');
 
-const image = sharp(inputImage);
-const metadata = await image.metadata();
+// Ensure output dirs
+const dirs = [
+	'favicon',
+	'square',
+	'wordmark',
+	'logomark',
+	'background_dark',
+	'background_light',
+	'social',
+	'monochrome/black_solid',
+	'monochrome/white_solid',
+	'monochrome/black_transparent',
+	'monochrome/white_transparent',
+];
 
-if (!metadata.width || !metadata.height) {
-	throw new Error('Could not read image metadata');
-}
+const ensureDirPromises = dirs.map(async d => ensureDir(path.join(outputDir, d)));
+await Promise.all(ensureDirPromises);
 
-// 1. Social (1200x630)
-const socialDir = path.join(outputDir, 'social');
-await ensureDir(socialDir);
-await sharp({
-	create: {
-		width: sizes.social.width,
-		height: sizes.social.height,
-		channels: 4,
-		background: {
-			r: 255, g: 255, b: 255, alpha: 1,
-		},
+// 1. Favicons & Squares (Uses LOGOMARK)
+const logomark = sharp(srcLogomarkTrans);
+
+const lmMeta = await logomark.metadata();
+const lmSize = Math.max(lmMeta.width ?? 0, lmMeta.height ?? 0);
+
+const paddedLogomarkBuffer = await logomark.clone().resize(lmSize, lmSize, {
+	fit: 'contain',
+	background: {
+		r: 255, g: 255, b: 255, alpha: 0,
 	},
-})
-	.composite([{input: inputImage}])
-	.png()
-	.toFile(path.join(socialDir, 'social_card.png'));
+}).toBuffer();
 
-// 2. Square (1024x1024)
-const squareDir = path.join(outputDir, 'square');
-await ensureDir(squareDir);
-const maxDim = Math.max(metadata.width, metadata.height);
-const pad = Math.floor(maxDim * 0.2); // 20% padding
-await image
-	.clone()
-	.resize({
-		width: maxDim + pad,
-		height: maxDim + pad,
-		fit: 'contain',
-		background: {
-			r: 255, g: 255, b: 255, alpha: 0,
-		},
-	})
-	.resize(sizes.square.width, sizes.square.height)
+const faviconPromises = sizes.favicon.map(async size => sharp(paddedLogomarkBuffer)
+	.resize(size, size)
 	.png()
-	.toFile(path.join(squareDir, 'square.png'));
-
-// 3. Favicons
-const favDir = path.join(outputDir, 'favicon');
-await ensureDir(favDir);
-const faviconPromises = sizes.favicon.map(async size => image
-	.clone()
-	.resize(size, size, {
-		fit: 'contain', background: {
-			r: 255, g: 255, b: 255, alpha: 0,
-		},
-	})
-	.png()
-	.toFile(path.join(favDir, `favicon-${size}x${size}.png`)));
+	.toFile(path.join(outputDir, 'favicon', `wranngle_favicon_${size}.png`)));
 await Promise.all(faviconPromises);
 
-// 4. Background Dark / Light
-const bgDarkDir = path.join(outputDir, 'background_dark');
-await ensureDir(bgDarkDir);
-await image
-	.clone()
-	.flatten({background: '#1a1a1a'})
-	.png()
-	.toFile(path.join(bgDarkDir, 'logo_dark_bg.png'));
+const squarePromises = sizes.square.map(async size => {
+	const sqImage = sharp(paddedLogomarkBuffer).resize(size, size);
+	await sqImage.clone().png().toFile(path.join(outputDir, 'square', `wranngle_square_${size}.png`));
+	await sqImage.clone().webp().toFile(path.join(outputDir, 'square', `wranngle_square_${size}.webp`));
+});
+await Promise.all(squarePromises);
 
-const bgLightDir = path.join(outputDir, 'background_light');
-await ensureDir(bgLightDir);
-await image
-	.clone()
-	.flatten({background: '#ffffff'})
-	.png()
-	.toFile(path.join(bgLightDir, 'logo_light_bg.png'));
+await sharp(paddedLogomarkBuffer).png().toFile(path.join(outputDir, 'logomark', 'wranngle_logomark_transparent.png'));
 
-// 5. Monochrome
-const monoDir = path.join(outputDir, 'monochrome');
-const bSolid = path.join(monoDir, 'black_solid');
-const bTrans = path.join(monoDir, 'black_transparent');
-const wSolid = path.join(monoDir, 'white_solid');
-const wTrans = path.join(monoDir, 'white_transparent');
-await ensureDir(bSolid);
-await ensureDir(bTrans);
-await ensureDir(wSolid);
-await ensureDir(wTrans);
+// 2. Wordmark Resizes
+const wordmark = sharp(srcWordmarkTrans);
+await wordmark.clone().png().toFile(path.join(outputDir, 'wordmark', 'wranngle_wordmark_original.png'));
 
-// Get raw buffer to manipulate pixels for monochrome
-const {data, info} = await image.clone().ensureAlpha().raw().toBuffer({
+const wordmarkPromises = sizes.wordmark.map(async width => {
+	const wm = wordmark.clone().resize(width, null);
+	await wm.clone().png().toFile(path.join(outputDir, 'wordmark', `wranngle_wordmark_${width}w.png`));
+	await wm.clone().webp().toFile(path.join(outputDir, 'wordmark', `wranngle_wordmark_${width}w.webp`));
+});
+await Promise.all(wordmarkPromises);
+
+// 3. Background Variants
+const darkBg = sharp(srcDarkBg);
+const darkBgPromises = sizes.wordmark.map(async width => {
+	const d = darkBg.clone().resize(width, null);
+	await d.clone().png().toFile(path.join(outputDir, 'background_dark', `wranngle_dark_${width}w.png`));
+	await d.clone().webp().toFile(path.join(outputDir, 'background_dark', `wranngle_dark_${width}w.webp`));
+});
+await Promise.all(darkBgPromises);
+
+const lightBg = sharp(srcLightBg);
+const lightBgPromises = sizes.wordmark.map(async width => {
+	const l = lightBg.clone().resize(width, null);
+	await l.clone().png().toFile(path.join(outputDir, 'background_light', `wranngle_light_${width}w.png`));
+	await l.clone().webp().toFile(path.join(outputDir, 'background_light', `wranngle_light_${width}w.webp`));
+});
+await Promise.all(lightBgPromises);
+
+// 4. Social Cards (OG, Twitter, LinkedIn)
+const socialPromises = Object.entries(sizes.social).map(async ([platform, dims]) => {
+	if (platform === 'profile') {
+		await sharp(paddedLogomarkBuffer)
+			.resize(dims.width, dims.height, {
+				fit: 'contain',
+				background: {
+					r: 255, g: 255, b: 255, alpha: 1,
+				},
+			})
+			.png()
+			.toFile(path.join(outputDir, 'social', `wranngle_social_${platform}.png`));
+		return;
+	}
+
+	const targetWmWidth = Math.floor(dims.width * 0.6);
+	const scaledWmBuffer = await wordmark.clone().resize(targetWmWidth, null).toBuffer();
+
+	const card = sharp({
+		create: {
+			width: dims.width,
+			height: dims.height,
+			channels: 4,
+			background: {
+				r: 255, g: 255, b: 255, alpha: 1,
+			},
+		},
+	}).composite([{input: scaledWmBuffer, gravity: 'center'}]);
+
+	await card.clone().png().toFile(path.join(outputDir, 'social', `wranngle_social_${platform}.png`));
+	await card.clone().webp().toFile(path.join(outputDir, 'social', `wranngle_social_${platform}.webp`));
+});
+await Promise.all(socialPromises);
+
+// 5. Monochrome Versions (Wordmark)
+const {data, info} = await wordmark.clone().ensureAlpha().raw().toBuffer({
 	resolveWithObject: true,
 });
 
@@ -115,31 +150,25 @@ const blackSolidData = Buffer.from(data);
 const whiteSolidData = Buffer.from(data);
 
 for (let i = 0; i < data.length; i += 4) {
-	// If pixel is somewhat opaque
 	if (data[i + 3] > 0) {
-		// Black Transparent: turn RGB to black, keep alpha
 		blackTransData[i] = 0;
 		blackTransData[i + 1] = 0;
 		blackTransData[i + 2] = 0;
 
-		// White Transparent: turn RGB to white, keep alpha
 		whiteTransData[i] = 255;
 		whiteTransData[i + 1] = 255;
 		whiteTransData[i + 2] = 255;
 
-		// Black Solid: turn RGB to black, make fully opaque
 		blackSolidData[i] = 0;
 		blackSolidData[i + 1] = 0;
 		blackSolidData[i + 2] = 0;
 		blackSolidData[i + 3] = 255;
 
-		// White Solid: turn RGB to white, make fully opaque
 		whiteSolidData[i] = 255;
 		whiteSolidData[i + 1] = 255;
 		whiteSolidData[i + 2] = 255;
 		whiteSolidData[i + 3] = 255;
 	} else {
-		// Transparent background for solid -> turn to white for black solid, turn to black for white solid
 		blackSolidData[i] = 255;
 		blackSolidData[i + 1] = 255;
 		blackSolidData[i + 2] = 255;
@@ -158,118 +187,25 @@ const toImage = (buffer: Uint8Array) => sharp(buffer, {
 		height: info.height,
 		channels: 4,
 	},
-}).png();
+});
 
-await toImage(blackTransData).toFile(path.join(bTrans, 'logo.png'));
-await toImage(whiteTransData).toFile(path.join(wTrans, 'logo.png'));
-await toImage(blackSolidData).toFile(path.join(bSolid, 'logo.png'));
-await toImage(whiteSolidData).toFile(path.join(wSolid, 'logo.png'));
+const monoMap = {
+	monochromeBlackTransparent: {dir: 'monochrome/black_transparent', buf: blackTransData, name: 'wranngle_black_trans'},
+	monochromeWhiteTransparent: {dir: 'monochrome/white_transparent', buf: whiteTransData, name: 'wranngle_white_trans'},
+	monochromeBlackSolid: {dir: 'monochrome/black_solid', buf: blackSolidData, name: 'wranngle_black_solid'},
+	monochromeWhiteSolid: {dir: 'monochrome/white_solid', buf: whiteSolidData, name: 'wranngle_white_solid'},
+};
 
-// 6. Wordmark & Logomark
-const wordmarkDir = path.join(outputDir, 'wordmark');
-await ensureDir(wordmarkDir);
-await image.clone().png().toFile(path.join(wordmarkDir, 'wordmark.png'));
+const monoPromises = Object.values(monoMap).map(async ({dir, buf, name}) => {
+	const outPath = path.join(outputDir, dir);
+	await toImage(buf).png().toFile(path.join(outPath, `${name}_original.png`));
 
-const logomarkDir = path.join(outputDir, 'logomark');
-await ensureDir(logomarkDir);
-const markSize = Math.min(metadata.height, metadata.width);
-await image.clone().extract({
-	left: 0,
-	top: 0,
-	width: markSize,
-	height: markSize,
-}).png().toFile(path.join(logomarkDir, 'logomark.png'));
-
-const lmFavicon = path.join(logomarkDir, 'favicon');
-await ensureDir(lmFavicon);
-const markImage = sharp(path.join(logomarkDir, 'logomark.png'));
-
-const markFaviconPromises = sizes.favicon.map(async size => markImage.clone().resize(size, size, {
-	fit: 'contain',
-}).png().toFile(path.join(lmFavicon, `favicon-${size}x${size}.png`)));
-await Promise.all(markFaviconPromises);
-
-const lmSocial = path.join(logomarkDir, 'social');
-await ensureDir(lmSocial);
-await sharp({
-	create: {
-		width: sizes.social.width,
-		height: sizes.social.height,
-		channels: 4,
-		background: {
-			r: 255, g: 255, b: 255, alpha: 1,
-		},
-	},
-}).composite([{input: path.join(logomarkDir, 'logomark.png')}]).png().toFile(path.join(lmSocial, 'social_card.png'));
-
-const lmSquare = path.join(logomarkDir, 'square');
-await ensureDir(lmSquare);
-await markImage.clone().resize(sizes.square.width, sizes.square.height, {
-	fit: 'contain', background: {
-		r: 255, g: 255, b: 255, alpha: 0,
-	},
-}).png().toFile(path.join(lmSquare, 'square.png'));
-
-const logomarkBlackTransparent = path.join(logomarkDir, 'monochrome', 'black_transparent');
-const logomarkWhiteTransparent = path.join(logomarkDir, 'monochrome', 'white_transparent');
-const logomarkBlackSolid = path.join(logomarkDir, 'monochrome', 'black_solid');
-const logomarkWhiteSolid = path.join(logomarkDir, 'monochrome', 'white_solid');
-await ensureDir(logomarkBlackTransparent);
-await ensureDir(logomarkWhiteTransparent);
-await ensureDir(logomarkBlackSolid);
-await ensureDir(logomarkWhiteSolid);
-
-const markBufInfo = await markImage.clone().ensureAlpha().raw().toBuffer({resolveWithObject: true});
-const mData = markBufInfo.data;
-
-const mbTransData = Buffer.from(mData);
-const mwTransData = Buffer.from(mData);
-const mbSolidData = Buffer.from(mData);
-const mwSolidData = Buffer.from(mData);
-
-for (let i = 0; i < mData.length; i += 4) {
-	if (mData[i + 3] > 0) {
-		mbTransData[i] = 0;
-		mbTransData[i + 1] = 0;
-		mbTransData[i + 2] = 0;
-
-		mwTransData[i] = 255;
-		mwTransData[i + 1] = 255;
-		mwTransData[i + 2] = 255;
-
-		mbSolidData[i] = 0;
-		mbSolidData[i + 1] = 0;
-		mbSolidData[i + 2] = 0;
-		mbSolidData[i + 3] = 255;
-
-		mwSolidData[i] = 255;
-		mwSolidData[i + 1] = 255;
-		mwSolidData[i + 2] = 255;
-		mwSolidData[i + 3] = 255;
-	} else {
-		mbSolidData[i] = 255;
-		mbSolidData[i + 1] = 255;
-		mbSolidData[i + 2] = 255;
-		mbSolidData[i + 3] = 255;
-
-		mwSolidData[i] = 0;
-		mwSolidData[i + 1] = 0;
-		mwSolidData[i + 2] = 0;
-		mwSolidData[i + 3] = 255;
-	}
-}
-
-const toMarkImage = (buffer: Uint8Array) => sharp(buffer, {
-	raw: {
-		width: markBufInfo.info.width,
-		height: markBufInfo.info.height,
-		channels: 4,
-	},
-}).png();
-
-await toMarkImage(mbTransData).toFile(path.join(logomarkBlackTransparent, 'logomark.png'));
-await toMarkImage(mwTransData).toFile(path.join(logomarkWhiteTransparent, 'logomark.png'));
-await toMarkImage(mbSolidData).toFile(path.join(logomarkBlackSolid, 'logomark.png'));
-await toMarkImage(mwSolidData).toFile(path.join(logomarkWhiteSolid, 'logomark.png'));
+	const scaledPromises = sizes.wordmark.map(async width => {
+		const scaled = toImage(buf).resize(width, null);
+		await scaled.clone().png().toFile(path.join(outPath, `${name}_${width}w.png`));
+	});
+	await Promise.all(scaledPromises);
+});
+await Promise.all(monoPromises);
 
 console.log('Done!');
