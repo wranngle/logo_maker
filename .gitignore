@@ -70,3 +70,4 @@ out/
 # <<< dotfiles-managed gitignore <<<
 *.png
 *.webp
+output/

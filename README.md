@@ -1,19 +1,22 @@
 # logo_maker
-> pipeline that slices a single svg into social and favicon variants
+> Wranngle's modern asset pipeline for generating the "Essential 5" favicons and social assets.
 
-![Status](https://img.shields.io/badge/status-experimental-orange.svg)
-
-> [!NOTE]
-> Experiment. Built to learn one specific thing. Code may not survive.
+![Status](https://img.shields.io/badge/status-stable-green.svg)
 
 ## What it does
-Takes a source SVG and generates a complete suite of brand assets. It produces dark and light background variants, monochrome versions, and specific cuts for social media avatars and favicons. It removes the manual work of slicing and exporting logo variants by hand.
+Takes a source SVG (or base64 encoded PNG) and generates a complete suite of modern brand assets adhering to 2025/2026 best practices.
+
+**The Pipeline outputs:**
+- **The "Essential 5" Favicons**: `favicon.ico`, `icon.svg`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`.
+- **PWA Ready**: Auto-generates `site.webmanifest`.
+- **Modern Social Assets**: `og-image.png` (1200x630), `social-feed.png` (1080x1350 4:5 ratio), and padded `profile.png` (800x800).
+- **Design System Aligned**: Utilizes the canonical `Night 950` and `Sunset 500` Wranngle brand tokens.
 
 ## Usage
-Provide a source SVG to generate the output directories.
+Provide a source SVG or base64 PNG text file to generate the output directories.
 
 ```bash
-./scripts/hero.sh raw/orange_svg_code.txt
+bun run src/index.ts raw/orange_svg_code.txt
 ```
 
 ## License
