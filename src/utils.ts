@@ -1,27 +1,46 @@
-import fs from 'node:fs/promises';
 import {Buffer} from 'node:buffer';
 
+const pngSignature = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+
+export function isPngBuffer(buffer: Uint8Array): boolean {
+	return Buffer.from(buffer.subarray(0, pngSignature.length)).equals(pngSignature);
+}
+
+export function isSvgBuffer(buffer: Uint8Array): boolean {
+	const content = Buffer.from(buffer.subarray(0, 512)).toString('utf8').trimStart();
+	return content.startsWith('<svg') || (content.startsWith('<?xml') && content.includes('<svg'));
+}
+
+function decodeDataUrl(content: string): Uint8Array | undefined {
+	const match = /^data:image\/(?:png|svg\+xml);base64,([\s\S]+)$/iv.exec(content.trim());
+	if (!match) {
+		return undefined;
+	}
+
+	return Buffer.from(match[1]!.replaceAll(/\s/gv, ''), 'base64');
+}
+
 export async function parseInputFile(filePath: string): Promise<Uint8Array> {
-	const content = await fs.readFile(filePath, 'utf8');
+	const fileBuffer = Buffer.from(await Bun.file(filePath).arrayBuffer());
 
-	if (content.startsWith('data:image/png;base64,')) {
-		const base64Data = content.replace('data:image/png;base64,', '');
-		return Buffer.from(base64Data, 'base64');
+	if (isPngBuffer(fileBuffer)) {
+		return fileBuffer;
 	}
 
-	if (content.startsWith('data:image/svg+xml;base64,')) {
-		const base64Data = content.replace('data:image/svg+xml;base64,', '');
-		return Buffer.from(base64Data, 'base64');
+	const textCandidate = fileBuffer.toString('utf8').trim();
+	const dataUrlBuffer = decodeDataUrl(textCandidate);
+
+	if (dataUrlBuffer) {
+		return dataUrlBuffer;
 	}
 
-	if (content.startsWith('<svg') || content.includes('<svg')) {
-		return Buffer.from(content, 'utf8');
+	if (isSvgBuffer(fileBuffer)) {
+		return fileBuffer;
 	}
 
-	// Assume it's already a raw buffer (e.g. a pure PNG or SVG file)
-	return fs.readFile(filePath);
+	throw new Error(`Unsupported input format: ${filePath}`);
 }
 
 export async function ensureDir(dir: string) {
-	await fs.mkdir(dir, {recursive: true});
+	await Bun.$`mkdir -p ${dir}`.quiet();
 }

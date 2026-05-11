@@ -36,43 +36,27 @@ jobs:
         with:
           python-version: "3.x"
       - name: yamllint
+        shell: bash
         run: |
+          set -euo pipefail
+          shopt -s nullglob globstar
           pip install --quiet yamllint
-          yamllint -d "{extends: default, rules: {line-length: disable, document-start: disable, truthy: {check-keys: false}}}" .
+          files=(.github/**/*.yml .github/**/*.yaml .automation/*.json .agents/*.yml .agents/*.yaml *.yml *.yaml)
+          [[ ${#files[@]} -eq 0 ]] && { echo "no yaml files - skipping"; exit 0; }
+          yamllint -d "{extends: default, rules: {line-length: disable, document-start: disable, truthy: {check-keys: false}}}" "${files[@]}"
 
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: detect-and-test
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ -f package.json ]];then
-            echo "::group::node"
-            node --version
-            (npm ci || npm install) >/dev/null
-            npm test --if-present
-            echo "::endgroup::"
-          elif [[ -f pyproject.toml || -f requirements.txt || -f setup.py ]];then
-            echo "::group::python"
-            python3 --version
-            python3 -m pip install --quiet --upgrade pip
-            [[ -f requirements.txt ]] && python3 -m pip install --quiet -r requirements.txt || true
-            [[ -f pyproject.toml ]] && python3 -m pip install --quiet -e . 2>/dev/null || true
-            python3 -m pytest -q 2>/dev/null || echo "no pytest config — skipping"
-            echo "::endgroup::"
-          elif [[ -f Cargo.toml ]];then
-            echo "::group::rust"
-            cargo --version
-            cargo test --all
-            echo "::endgroup::"
-          elif [[ -f go.mod ]];then
-            echo "::group::go"
-            go version
-            go test ./...
-            echo "::endgroup::"
-          else
-            echo "no language toolchain detected — running smoke check only"
-            ls -la
-          fi
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.13"
+      - name: install
+        run: bun install --frozen-lockfile
+      - name: lint
+        run: bun run lint
+      - name: typecheck
+        run: bun run typecheck
+      - name: test
+        run: bun test

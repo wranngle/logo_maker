@@ -1,13 +1,8 @@
-name: 🐞 Bug
+name: Bug
 description: Existing behavior is wrong
 title: "bug: "
 labels: [t.bug, triage]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Tip: paste this prompt to Claude / Codex / Gemini to fill the form for you →
-        > "Open a bug issue. Symptom: <one sentence>. Use my recent shell history and code context to fill all fields."
   - type: textarea
     id: what
     attributes:
@@ -42,7 +37,7 @@ body:
     id: env
     attributes:
       label: Environment
-      description: Versions, OS, runtime. Paste `node -v && npm -v && uname -a` or equivalent.
+      description: Versions, OS, runtime. Paste `bun --version && uname -a` when relevant.
       render: shell
   - type: textarea
     id: logs

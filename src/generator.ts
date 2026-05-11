@@ -3,25 +3,67 @@ import {Buffer} from 'node:buffer';
 import sharp from 'sharp';
 import {wranngleColors} from './colors.js';
 
-export async function generateEssentialFavicons(inputBuffer: Uint8Array, outputDir: string) {
-	const image = sharp(inputBuffer);
-	const meta = await image.metadata();
-	const size = Math.max(meta.width ?? 0, meta.height ?? 0);
+const transparent = {
+	r: 0,
+	g: 0,
+	b: 0,
+	alpha: 0,
+};
 
-	// Make a square padded version of the input
+function makeIco(pngBuffer: Uint8Array, width: number, height: number): Uint8Array {
+	const png = Buffer.from(pngBuffer);
+	const headerSize = 6;
+	const directorySize = 16;
+	const imageOffset = headerSize + directorySize;
+	const icoBuffer = Buffer.alloc(imageOffset + png.length);
+
+	icoBuffer.writeUInt16LE(0, 0);
+	icoBuffer.writeUInt16LE(1, 2);
+	icoBuffer.writeUInt16LE(1, 4);
+	icoBuffer.writeUInt8(width >= 256 ? 0 : width, 6);
+	icoBuffer.writeUInt8(height >= 256 ? 0 : height, 7);
+	icoBuffer.writeUInt8(0, 8);
+	icoBuffer.writeUInt8(0, 9);
+	icoBuffer.writeUInt16LE(1, 10);
+	icoBuffer.writeUInt16LE(32, 12);
+	icoBuffer.writeUInt32LE(png.length, 14);
+	icoBuffer.writeUInt32LE(imageOffset, 18);
+	png.copy(icoBuffer, imageOffset);
+
+	return icoBuffer;
+}
+
+async function loadSourceImage(inputBuffer: Uint8Array) {
+	const image = sharp(inputBuffer);
+	const metadata = await image.metadata();
+	const width = metadata.width ?? 0;
+	const height = metadata.height ?? 0;
+
+	if (width <= 0 || height <= 0) {
+		throw new Error('Input image has no readable dimensions.');
+	}
+
+	return {
+		image,
+		size: Math.max(width, height),
+	};
+}
+
+export async function generateEssentialFavicons(inputBuffer: Uint8Array, outputDir: string) {
+	const {image, size} = await loadSourceImage(inputBuffer);
+
 	const paddedBuffer = await image.clone().resize(size, size, {
 		fit: 'contain',
-		background: {r: 0, g: 0, b: 0, alpha: 0},
+		background: transparent,
 	}).toBuffer();
 
-	// 1. favicon.ico (Legacy Fallback - 32x32)
-	// We'll generate a 32x32 PNG and save it as .ico. Most browsers accept this.
-	await sharp(paddedBuffer)
+	const faviconPng = await sharp(paddedBuffer)
 		.resize(32, 32)
 		.png()
-		.toFile(path.join(outputDir, 'favicon.ico'));
+		.toBuffer();
 
-	// 2. apple-touch-icon.png (180x180, strictly opaque)
+	await Bun.write(path.join(outputDir, 'favicon.ico'), makeIco(faviconPng, 32, 32));
+
 	await sharp(paddedBuffer)
 		.resize(180, 180, {
 			fit: 'contain',
@@ -31,23 +73,26 @@ export async function generateEssentialFavicons(inputBuffer: Uint8Array, outputD
 		.png()
 		.toFile(path.join(outputDir, 'apple-touch-icon.png'));
 
-	// 3. icon-192.png & icon-512.png (PWA with 80% safe zone padding)
-	// 80% of 192 is ~153
 	await sharp(paddedBuffer)
-		.resize(153, 153, {fit: 'contain', background: {r: 0, g: 0, b: 0, alpha: 0}})
+		.resize(153, 153, {
+			fit: 'contain',
+			background: transparent,
+		})
 		.extend({
 			top: 19, bottom: 20, left: 19, right: 20,
-			background: {r: 0, g: 0, b: 0, alpha: 0},
+			background: transparent,
 		})
 		.png()
 		.toFile(path.join(outputDir, 'icon-192.png'));
 
-	// 80% of 512 is 409
 	await sharp(paddedBuffer)
-		.resize(409, 409, {fit: 'contain', background: {r: 0, g: 0, b: 0, alpha: 0}})
+		.resize(409, 409, {
+			fit: 'contain',
+			background: transparent,
+		})
 		.extend({
 			top: 51, bottom: 52, left: 51, right: 52,
-			background: {r: 0, g: 0, b: 0, alpha: 0},
+			background: transparent,
 		})
 		.png()
 		.toFile(path.join(outputDir, 'icon-512.png'));
@@ -56,9 +101,10 @@ export async function generateEssentialFavicons(inputBuffer: Uint8Array, outputD
 export async function generateSocialAssets(inputBuffer: Uint8Array, outputDir: string) {
 	const image = sharp(inputBuffer);
 
-	// 1. Universal OG Image (1200x630)
-	// 1080x566 safe zone implies logo should fit within this area. Let's scale logo to max 500x500 for safety.
-	const ogLogo = await image.clone().resize(500, 500, {fit: 'contain', background: {r: 0, g: 0, b: 0, alpha: 0}}).toBuffer();
+	const ogLogo = await image.clone().resize(500, 500, {
+		fit: 'contain',
+		background: transparent,
+	}).toBuffer();
 
 	const ogCanvas = sharp({
 		create: {
@@ -72,9 +118,10 @@ export async function generateSocialAssets(inputBuffer: Uint8Array, outputDir: s
 	await ogCanvas.clone().png().toFile(path.join(outputDir, 'og-image.png'));
 	await ogCanvas.clone().webp().toFile(path.join(outputDir, 'og-image.webp'));
 
-	// 2. Profile Avatar (800x800, 20% safe padding for circular crops)
-	// 20% padding on each side = 160px. So logo should be 480x480 max.
-	const profileLogo = await image.clone().resize(480, 480, {fit: 'contain', background: {r: 0, g: 0, b: 0, alpha: 0}}).toBuffer();
+	const profileLogo = await image.clone().resize(480, 480, {
+		fit: 'contain',
+		background: transparent,
+	}).toBuffer();
 	const profileCanvas = sharp({
 		create: {
 			width: 800,
@@ -86,8 +133,10 @@ export async function generateSocialAssets(inputBuffer: Uint8Array, outputDir: s
 
 	await profileCanvas.clone().png().toFile(path.join(outputDir, 'profile.png'));
 
-	// 3. Social Feed Post (1080x1350 - 4:5 ratio)
-	const feedLogo = await image.clone().resize(700, 700, {fit: 'contain', background: {r: 0, g: 0, b: 0, alpha: 0}}).toBuffer();
+	const feedLogo = await image.clone().resize(700, 700, {
+		fit: 'contain',
+		background: transparent,
+	}).toBuffer();
 	const feedCanvas = sharp({
 		create: {
 			width: 1080,

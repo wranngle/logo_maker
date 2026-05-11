@@ -4,17 +4,19 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "bun run src/index.ts",
-    "lint": "xo"
+    "start": "scripts/bin/bun-local.sh src/index.ts",
+    "generate": "scripts/bin/bun-local.sh src/index.ts",
+    "lint": "xo",
+    "test": "scripts/bin/bun-local.sh test",
+    "typecheck": "tsc --noEmit",
+    "check": "xo && tsc --noEmit && scripts/bin/bun-local.sh test"
   },
   "devDependencies": {
     "@types/bun": "^1.3.13",
     "bun-types": "^1.3.13",
     "eslint-config-xo-typescript": "^11.0.0",
+    "typescript": "^5.9.3",
     "xo": "^2.0.2"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
   },
   "dependencies": {
     "sharp": "^0.34.5"

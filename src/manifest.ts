@@ -1,46 +1,65 @@
-import fs from 'node:fs/promises';
 import path from 'node:path';
 import {Buffer} from 'node:buffer';
+import {isSvgBuffer} from './utils.js';
 
-export async function generateManifest(outputDir: string) {
-	const manifest = {
-		name: 'Wranngle App',
-		// eslint-disable-next-line @typescript-eslint/naming-convention
-		short_name: 'Wranngle',
+export type ManifestOptions = {
+	name: string;
+	shortName: string;
+	themeColor: string;
+	backgroundColor: string;
+};
+
+type WebManifest = {
+	name: string;
+	short_name: string;
+	icons: Array<{
+		src: string;
+		type: string;
+		sizes: string;
+		purpose: string;
+	}>;
+	theme_color: string;
+	background_color: string;
+	display: 'standalone';
+};
+
+const shortNameKey = 'short_name';
+const themeColorKey = 'theme_color';
+const backgroundColorKey = 'background_color';
+
+export async function generateManifest(outputDir: string, options: ManifestOptions) {
+	const manifest: WebManifest = {
+		name: options.name,
+		[shortNameKey]: options.shortName,
 		icons: [
 			{
-				src: '/icon-192.png',
+				src: 'icon-192.png',
 				type: 'image/png',
 				sizes: '192x192',
 				purpose: 'any maskable',
 			},
 			{
-				src: '/icon-512.png',
+				src: 'icon-512.png',
 				type: 'image/png',
 				sizes: '512x512',
 				purpose: 'any maskable',
 			},
 		],
-		// eslint-disable-next-line @typescript-eslint/naming-convention
-		theme_color: '#ff5f00',
-		// eslint-disable-next-line @typescript-eslint/naming-convention
-		background_color: '#12111a',
+		[themeColorKey]: options.themeColor,
+		[backgroundColorKey]: options.backgroundColor,
 		display: 'standalone',
 	};
 
-	await fs.writeFile(
+	await Bun.write(
 		path.join(outputDir, 'site.webmanifest'),
 		JSON.stringify(manifest, null, '\t'),
 	);
 }
 
 export async function generateSvgIcon(outputDir: string, svgContent: Uint8Array | string) {
-	// If the input was an SVG, we write it as icon.svg
-	// Since we might be given a PNG, we'll gracefully skip if it's not SVG
-	const contentStr = typeof svgContent === 'string' ? svgContent : Buffer.from(svgContent).toString('utf8');
-	if (contentStr.includes('<svg')) {
-		// In a real scenario we could inject the prefers-color-scheme media query
-		// For now we just save the master SVG
-		await fs.writeFile(path.join(outputDir, 'icon.svg'), contentStr);
+	const contentBuffer = typeof svgContent === 'string' ? Buffer.from(svgContent) : Buffer.from(svgContent);
+
+	if (isSvgBuffer(contentBuffer)) {
+		await Bun.write(path.join(outputDir, 'icon.svg'), contentBuffer);
 	}
 }

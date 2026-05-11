@@ -31,4 +31,17 @@ codex:
 
 You are operating inside this project. Complete the assigned task using the repository's local knowledge base and validation loops.
 
-Replace this prompt body with project-specific guidance once the bootstrap stub is no longer useful.
+Use Bun for all JavaScript and TypeScript work. For code changes, run:
+
+```bash
+bun run check
+```
+
+For asset pipeline changes, also run a smoke generation into a temporary
+directory:
+
+```bash
+bun run generate -- raw/logo-data-url.txt --output /tmp/logo-maker-output
+```
+
+Do not commit generated assets, runtime logs, or scratch image exports.
