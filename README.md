@@ -1,23 +1,41 @@
 # logo_maker
-> Wranngle's modern asset pipeline for generating the "Essential 5" favicons and social assets.
+Generate Wranngle favicon, web manifest, and social preview assets from one PNG
+or SVG source.
 
-![Status](https://img.shields.io/badge/status-stable-green.svg)
+![CI](https://github.com/wranngle/logo_maker/actions/workflows/ci.yml/badge.svg)
 
-## What it does
-Takes a source SVG (or base64 encoded PNG) and generates a complete suite of modern brand assets adhering to 2025/2026 best practices.
+## Outputs
 
-**The Pipeline outputs:**
-- **The "Essential 5" Favicons**: `favicon.ico`, `icon.svg`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`.
-- **PWA Ready**: Auto-generates `site.webmanifest`.
-- **Modern Social Assets**: `og-image.png` (1200x630), `social-feed.png` (1080x1350 4:5 ratio), and padded `profile.png` (800x800).
-- **Design System Aligned**: Utilizes the canonical `Night 950` and `Sunset 500` Wranngle brand tokens.
+- `output/favicons/favicon.ico`
+- `output/favicons/apple-touch-icon.png`
+- `output/favicons/icon-192.png`
+- `output/favicons/icon-512.png`
+- `output/favicons/icon.svg` when the input is SVG
+- `output/favicons/site.webmanifest`
+- `output/social/og-image.png` and `og-image.webp`
+- `output/social/profile.png`
+- `output/social/social-feed.png` and `social-feed.webp`
 
 ## Usage
-Provide a source SVG or base64 PNG text file to generate the output directories.
+
+Install dependencies, then pass a PNG, SVG, or PNG/SVG data URL text file.
 
 ```bash
-bun run src/index.ts raw/orange_svg_code.txt
+bun install
+bun run generate -- raw/logo-data-url.txt
 ```
 
-## License
-See [LICENSE](LICENSE).
+Useful options:
+
+```bash
+bun run generate -- raw/logo-data-url.txt \
+  --output dist/assets \
+  --app-name Wranngle \
+  --short-name Wranngle
+```
+
+Run the full local check:
+
+```bash
+bun run check
+```

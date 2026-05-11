@@ -22,4 +22,6 @@ ffmpeg -y -i "$rawRenderedGif" -vcodec libwebp -lossless 0 -q:v 70 -loop 0 -an d
 gifByteSize=$(stat -c%s demo/hero.gif 2>/dev/null||stat -f%z demo/hero.gif)
 webpByteSize=$(stat -c%s demo/hero.webp 2>/dev/null||stat -f%z demo/hero.webp)
 emitEcsEventOnStderr info hero.complete success '' "gif=${gifByteSize}b webp=${webpByteSize}b"
-((gifByteSize>5242880))&&emitEcsEventOnStderr warn hero.gif-oversize failure '' "gif=${gifByteSize}b limit=5MB"||:
+if ((gifByteSize > 5242880)); then
+  emitEcsEventOnStderr warn hero.gif-oversize failure '' "gif=${gifByteSize}b limit=5MB"
+fi

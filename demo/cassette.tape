@@ -1,5 +1,4 @@
-# demo/cassette.tape — VHS recording script (https://github.com/charmbracelet/vhs)
-# Edit this with the actual demo flow for logo_maker.
+# demo/cassette.tape - VHS recording script (https://github.com/charmbracelet/vhs)
 
 Output demo/cassette.gif
 
@@ -9,6 +8,9 @@ Set Height 720
 Set Padding 20
 Set Theme "Catppuccin Frappé"
 
-Type "echo 'Replace this with a real demo of logo_maker'"
+Type "bun run generate -- raw/logo-data-url.txt --output /tmp/logo-maker-demo"
 Enter
-Sleep 2s
+Sleep 1s
+Type "find /tmp/logo-maker-demo -maxdepth 2 -type f | sort"
+Enter
+Sleep 3s

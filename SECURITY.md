@@ -5,7 +5,7 @@
 Please do not report security vulnerabilities through public GitHub issues.
 
 Instead, please report them using GitHub's Private Vulnerability Reporting (PVR):
-[Report a vulnerability](https://example.com/REPO_URL_NOT_DETECTED/security/advisories/new)
+[Report a vulnerability](https://github.com/wranngle/logo_maker/security/advisories/new)
 
 If you are unable to use PVR for any reason, you may send an email to cody@wranngle.com.
 
