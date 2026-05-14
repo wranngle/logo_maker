@@ -1,0 +1,36 @@
+name: regen-assets
+on:
+  schedule:
+    - cron: "0 9 * * *"
+  push:
+    branches: [main, master]
+    paths:
+      - "raw/logo-data-url.txt"
+      - "src/**"
+      - ".github/workflows/regen-assets.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: regen-assets-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  regen:
+    name: regen
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.13"
+      - name: install
+        run: bun install --frozen-lockfile
+      - name: regenerate assets
+        run: bun run generate -- raw/logo-data-url.txt --output output
+      - name: upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: brand-assets
+          path: output/
+          if-no-files-found: error
+          retention-days: 14
