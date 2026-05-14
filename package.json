@@ -7,6 +7,7 @@
     "start": "scripts/bin/bun-local.sh src/index.ts",
     "generate": "scripts/bin/bun-local.sh src/index.ts",
     "palette": "scripts/bin/bun-local.sh src/index.ts palette",
+    "brand-book": "scripts/bin/bun-local.sh src/brand-book.ts",
     "lint": "xo",
     "test": "scripts/bin/bun-local.sh test",
     "typecheck": "tsc --noEmit",
