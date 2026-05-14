@@ -1,4 +1,7 @@
 # logo_maker
+
+![hero](docs/hero.png)
+
 Generate Wranngle favicon, web manifest, and social preview assets from one PNG
 or SVG source.
 
