@@ -36,19 +36,18 @@ function pickInitialCentroids(pixels: Array<[number, number, number]>, k: number
 	return centroids;
 }
 
-function runKMeans(pixels: Array<[number, number, number]>, k: number, maxIterations = 20): Array<[number, number, number]> {
+function runKmeans(pixels: Array<[number, number, number]>, k: number, maxIterations = 20): Array<[number, number, number]> {
 	if (pixels.length === 0) {
 		throw new Error('Cannot extract palette from empty pixel set.');
 	}
 
 	const centroids = pickInitialCentroids(pixels, k);
-	const assignments = new Array<number>(pixels.length).fill(0);
+	const assignments = Array.from({length: pixels.length}, () => 0);
 
 	for (let iteration = 0; iteration < maxIterations; iteration++) {
 		let changed = false;
 
-		for (let index = 0; index < pixels.length; index++) {
-			const pixel = pixels[index]!;
+		for (const [index, pixel] of pixels.entries()) {
 			let bestCluster = 0;
 			let bestDistance = squaredDistance(pixel, centroids[0]!);
 			for (let c = 1; c < k; c++) {
@@ -66,9 +65,8 @@ function runKMeans(pixels: Array<[number, number, number]>, k: number, maxIterat
 		}
 
 		const sums = Array.from({length: k}, () => [0, 0, 0, 0] as [number, number, number, number]);
-		for (let index = 0; index < pixels.length; index++) {
+		for (const [index, pixel] of pixels.entries()) {
 			const cluster = assignments[index]!;
-			const pixel = pixels[index]!;
 			const bucket = sums[cluster]!;
 			bucket[0] += pixel[0];
 			bucket[1] += pixel[1];
@@ -76,8 +74,7 @@ function runKMeans(pixels: Array<[number, number, number]>, k: number, maxIterat
 			bucket[3] += 1;
 		}
 
-		for (let c = 0; c < k; c++) {
-			const bucket = sums[c]!;
+		for (const [c, bucket] of sums.entries()) {
 			if (bucket[3] > 0) {
 				centroids[c] = [
 					Math.round(bucket[0] / bucket[3]),
@@ -121,7 +118,7 @@ export async function extractPalette(imagePath: string, count = 5): Promise<Pale
 		.toBuffer({resolveWithObject: true});
 
 	const pixels: Array<[number, number, number]> = [];
-	const channels = info.channels;
+	const {channels} = info;
 	for (let index = 0; index < data.length; index += channels) {
 		const alpha = channels >= 4 ? data[index + 3]! : 255;
 		if (alpha < 16) {
@@ -135,7 +132,7 @@ export async function extractPalette(imagePath: string, count = 5): Promise<Pale
 		throw new Error('Image has no opaque pixels to sample.');
 	}
 
-	const centroids = runKMeans(pixels, count);
+	const centroids = runKmeans(pixels, count);
 
 	return centroids.map((centroid, index) => {
 		const r = clampByte(centroid[0]);

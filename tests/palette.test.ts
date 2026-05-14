@@ -12,7 +12,7 @@ test('extractPalette returns exactly 5 colors with hex, rgb, and name', async ()
 
 	expect(palette).toHaveLength(5);
 	for (const color of palette) {
-		expect(color.hex).toMatch(/^#[0-9a-f]{6}$/);
+		expect(color.hex).toMatch(/^#[\da-f]{6}$/v);
 		expect(color.rgb).toHaveLength(3);
 		for (const channel of color.rgb) {
 			expect(channel).toBeGreaterThanOrEqual(0);
@@ -20,7 +20,7 @@ test('extractPalette returns exactly 5 colors with hex, rgb, and name', async ()
 			expect(Number.isInteger(channel)).toBe(true);
 		}
 
-		expect(color.name).toMatch(/^brand-[1-5]$/);
+		expect(color.name).toMatch(/^brand-[1-5]$/v);
 	}
 });
 
@@ -29,19 +29,45 @@ test('paletteToCss emits 5 --brand-N variables under :root', async () => {
 	const css = paletteToCss(palette);
 
 	expect(css).toContain(':root {');
-	const matches = css.match(/--brand-\d:\s*#[0-9a-f]{6};/g) ?? [];
+	const matches = css.match(/--brand-\d:\s*#[\da-f]{6};/gv) ?? [];
 	expect(matches).toHaveLength(5);
 	for (let index = 1; index <= 5; index++) {
 		expect(css).toContain(`--brand-${index}:`);
 	}
 });
 
+type ParsedColor = {hex: string; rgb: [number, number, number]; name: string};
+type ParsedPalette = {colors: ParsedColor[]};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null;
+}
+
+function isParsedColor(value: unknown): value is ParsedColor {
+	if (!isRecord(value)) {
+		return false;
+	}
+
+	return typeof value.hex === 'string'
+		&& Array.isArray(value.rgb)
+		&& value.rgb.length === 3
+		&& value.rgb.every(channel => typeof channel === 'number')
+		&& typeof value.name === 'string';
+}
+
+function asParsedPalette(value: unknown): ParsedPalette {
+	if (!isRecord(value) || !Array.isArray(value.colors) || !value.colors.every(entry => isParsedColor(entry))) {
+		throw new TypeError('Parsed palette JSON is malformed.');
+	}
+
+	return {colors: value.colors};
+}
+
 test('paletteToJson is parseable and has 5 entries with required fields', async () => {
 	const palette = await extractPalette(fixturePath, 5);
 	const json = paletteToJson(palette);
-	const parsed = JSON.parse(json) as {colors: Array<{hex: string; rgb: [number, number, number]; name: string}>};
+	const parsed = asParsedPalette(JSON.parse(json));
 
-	expect(Array.isArray(parsed.colors)).toBe(true);
 	expect(parsed.colors).toHaveLength(5);
 	for (const color of parsed.colors) {
 		expect(typeof color.hex).toBe('string');
@@ -65,6 +91,6 @@ test('palette files land in output/brand/ when written to a tmp dir', async () =
 	const cssContents = await fs.readFile(cssPath, 'utf8');
 	const jsonContents = await fs.readFile(jsonPath, 'utf8');
 	expect(cssContents).toContain('--brand-1:');
-	const parsed = JSON.parse(jsonContents) as {colors: unknown[]};
+	const parsed = asParsedPalette(JSON.parse(jsonContents));
 	expect(parsed.colors).toHaveLength(5);
 });
