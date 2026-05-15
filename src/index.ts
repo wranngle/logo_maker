@@ -7,6 +7,7 @@ import {wranngleColors} from './colors.js';
 import {extractPalette, paletteToCss, paletteToJson} from './palette.js';
 import {runKit, type KitOptions} from './kit.js';
 import {isOgTemplateName} from './og.js';
+import {generateVariations, type VariationsOptions} from './variations.js';
 
 type CliOptions = ManifestOptions & {
 	inputFilePath: string;
@@ -17,6 +18,7 @@ const usage = `Usage:
   bun run generate -- <input-file> [options]
   bun run generate -- palette <input-file> [--output <dir>] [--count <n>]
   bun run generate -- kit "<name>" --color <hex> [--out <dir>] [--type <style>] [--og <template>]
+  bun run generate -- variations "<name>" --color <hex> [--out <dir>]
 
 Options:
   --output <dir>              Output directory. Defaults to ./output.
@@ -25,11 +27,16 @@ Options:
   --theme-color <hex>         Web manifest theme color. Defaults to #ff5f00.
   --background-color <hex>    Web manifest background color. Defaults to #12111a.
   --count <n>                 Palette size for the palette subcommand. Defaults to 5.
-  --out <dir>                 Parent dir for kit subcommand. Defaults to ./out.
-  --color <hex>               Seed color for kit subcommand (6-digit hex).
+  --out <dir>                 Parent dir for kit/variations subcommands. Defaults to ./out.
+  --color <hex>               Seed color for kit/variations subcommands (6-digit hex).
   --type <style>              serif | sans | display | mono. Defaults to sans.
   --og <template>             minimal | bold | gradient. Defaults to minimal.
   --help                      Show this help.
+
+Subcommands:
+  variations <name> --color <hex> [--out <dir>]
+      Emit 5 logo variation SVGs (wordmark, monogram, icon, dark, light)
+      into <out>/<slug>/ plus a variations.json manifest.
 `;
 
 function readOption(args: string[], index: number, flag: string): string {
@@ -269,6 +276,63 @@ async function runKitCommand(args: string[]) {
 	console.log(`[DONE ] ${path.join(options.outDir, manifest.slug)} (${manifest.steps.length} steps, ${failed.length} failed)`);
 }
 
+function parseVariationsArguments(args: string[]): VariationsOptions {
+	let name = '';
+	let color = '';
+	let outDir = path.join(process.cwd(), 'output', 'variations');
+
+	for (let index = 0; index < args.length; index++) {
+		const argument = args[index]!;
+		if (!argument.startsWith('--')) {
+			if (name) {
+				throw new Error(`Unexpected extra positional: ${argument}`);
+			}
+
+			name = argument;
+			continue;
+		}
+
+		switch (argument) {
+			case '--color': {
+				color = readOption(args, index, argument);
+				index++;
+				break;
+			}
+
+			case '--out': {
+				outDir = path.resolve(process.cwd(), readOption(args, index, argument));
+				index++;
+				break;
+			}
+
+			default: {
+				throw new Error(`Unknown variations option: ${argument}`);
+			}
+		}
+	}
+
+	if (!name) {
+		throw new Error('variations subcommand requires a brand name positional.');
+	}
+
+	if (!color) {
+		throw new Error('variations subcommand requires --color <hex>.');
+	}
+
+	return {name, color, outDir};
+}
+
+async function runVariationsCommand(args: string[]) {
+	const options = parseVariationsArguments(args);
+	console.log(`[INFO] Rendering variations for "${options.name}" (${options.color})`);
+	const manifest = await generateVariations(options);
+	for (const artifact of manifest.artifacts) {
+		console.log(`[READY] ${path.basename(artifact.file)}`);
+	}
+
+	console.log(`[DONE ] ${path.join(options.outDir, manifest.slug)} (${manifest.artifacts.length} variations)`);
+}
+
 async function main() {
 	try {
 		const argv = process.argv.slice(2);
@@ -279,6 +343,11 @@ async function main() {
 
 		if (argv[0] === 'kit') {
 			await runKitCommand(argv.slice(1));
+			return;
+		}
+
+		if (argv[0] === 'variations') {
+			await runVariationsCommand(argv.slice(1));
 			return;
 		}
 
