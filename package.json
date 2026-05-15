@@ -6,6 +6,7 @@
   "scripts": {
     "start": "scripts/bin/bun-local.sh src/index.ts",
     "generate": "scripts/bin/bun-local.sh src/index.ts",
+    "palette": "scripts/bin/bun-local.sh src/index.ts palette",
     "lint": "xo",
     "test": "scripts/bin/bun-local.sh test",
     "typecheck": "tsc --noEmit",
