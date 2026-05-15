@@ -6,6 +6,7 @@ Generate Wranngle favicon, web manifest, and social preview assets from one PNG
 or SVG source.
 
 ![CI](https://github.com/wranngle/logo_maker/actions/workflows/ci.yml/badge.svg)
+![Assets](https://github.com/wranngle/logo_maker/actions/workflows/regen-assets.yml/badge.svg)
 
 ## Outputs
 
