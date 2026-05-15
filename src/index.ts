@@ -4,6 +4,7 @@ import {parseInputFile, ensureDir} from './utils.js';
 import {generateManifest, generateSvgIcon, type ManifestOptions} from './manifest.js';
 import {generateEssentialFavicons, generateSocialAssets} from './generator.js';
 import {wranngleColors} from './colors.js';
+import {generateVariations, type VariationsOptions} from './variations.js';
 
 type CliOptions = ManifestOptions & {
 	inputFilePath: string;
@@ -11,6 +12,7 @@ type CliOptions = ManifestOptions & {
 };
 
 const usage = `Usage: bun run generate -- <input-file> [options]
+       bun run start -- variations "<name>" --color <hex> [--out <dir>]
 
 Options:
   --output <dir>              Output directory. Defaults to ./output.
@@ -19,6 +21,11 @@ Options:
   --theme-color <hex>         Web manifest theme color. Defaults to #ff5f00.
   --background-color <hex>    Web manifest background color. Defaults to #12111a.
   --help                      Show this help.
+
+Subcommands:
+  variations <name> --color <hex> [--out <dir>]
+      Emit 5 logo variation SVGs (wordmark, monogram, icon, dark, light)
+      into <out>/<slug>/ plus a variations.json manifest.
 `;
 
 function readOption(args: string[], index: number, flag: string): string {
@@ -100,9 +107,72 @@ function parseArguments(args: string[]): CliOptions | undefined {
 	return options;
 }
 
+function parseVariationsArguments(args: string[]): VariationsOptions {
+	let name = '';
+	let color = '';
+	let outDir = path.join(process.cwd(), 'output', 'variations');
+
+	for (let index = 0; index < args.length; index++) {
+		const argument = args[index]!;
+		if (!argument.startsWith('--')) {
+			if (name) {
+				throw new Error(`Unexpected extra positional: ${argument}`);
+			}
+
+			name = argument;
+			continue;
+		}
+
+		switch (argument) {
+			case '--color': {
+				color = readOption(args, index, argument);
+				index++;
+				break;
+			}
+
+			case '--out': {
+				outDir = path.resolve(process.cwd(), readOption(args, index, argument));
+				index++;
+				break;
+			}
+
+			default: {
+				throw new Error(`Unknown variations option: ${argument}`);
+			}
+		}
+	}
+
+	if (!name) {
+		throw new Error('variations subcommand requires a brand name positional.');
+	}
+
+	if (!color) {
+		throw new Error('variations subcommand requires --color <hex>.');
+	}
+
+	return {name, color, outDir};
+}
+
+async function runVariationsCommand(args: string[]) {
+	const options = parseVariationsArguments(args);
+	console.log(`[INFO] Rendering variations for "${options.name}" (${options.color})`);
+	const manifest = await generateVariations(options);
+	for (const artifact of manifest.artifacts) {
+		console.log(`[READY] ${path.basename(artifact.file)}`);
+	}
+
+	console.log(`[DONE ] ${path.join(options.outDir, manifest.slug)} (${manifest.artifacts.length} variations)`);
+}
+
 async function main() {
 	try {
-		const options = parseArguments(process.argv.slice(2));
+		const argv = process.argv.slice(2);
+		if (argv[0] === 'variations') {
+			await runVariationsCommand(argv.slice(1));
+			return;
+		}
+
+		const options = parseArguments(argv);
 		if (!options) {
 			return;
 		}
