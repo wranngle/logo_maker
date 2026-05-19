@@ -17,7 +17,7 @@ export type TaglineOptions = {
 	mock?: boolean;
 };
 
-const TAGLINE_COUNT = 5;
+const taglineCount = 5;
 
 const adjectiveRe = /^[a-zA-Z][a-zA-Z0-9 \-]{0,31}$/v;
 const nameRe = /^.{1,64}$/v;
@@ -100,8 +100,8 @@ export async function generateTaglines(options: TaglineOptions): Promise<Tagline
 	const name = normalizeName(options.name);
 	const adjective = normalizeAdjective(options.adjective);
 	const taglines = options.mock ? mockGenerate(name, adjective) : mockGenerate(name, adjective);
-	if (taglines.length !== TAGLINE_COUNT) {
-		throw new Error(`expected ${TAGLINE_COUNT} taglines, got ${taglines.length}`);
+	if (taglines.length !== taglineCount) {
+		throw new Error(`expected ${taglineCount} taglines, got ${taglines.length}`);
 	}
 
 	return {name, adjective, taglines};
@@ -132,10 +132,10 @@ function parseArguments(args: string[]): CliOptions {
 			default: {
 				if (!options.name) {
 					options.name = argument;
-				} else if (!options.adjective) {
-					options.adjective = argument;
-				} else {
+				} else if (options.adjective) {
 					throw new Error(`Unexpected argument: ${argument}`);
+				} else {
+					options.adjective = argument;
 				}
 			}
 		}

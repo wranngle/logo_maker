@@ -1,7 +1,7 @@
-import {describe, expect, test} from 'bun:test';
 import {spawnSync} from 'node:child_process';
 import path from 'node:path';
 import process from 'node:process';
+import {describe, expect, test} from 'bun:test';
 import {
 	generateTaglines,
 	normalizeAdjective,
@@ -77,13 +77,23 @@ describe('tagline CLI --mock', () => {
 	test('stdout is parseable JSON matching {taglines: string[5]} contract', () => {
 		const result = spawnSync(bunBin, [entry, 'Wranngle', 'bold', '--mock'], {encoding: 'utf8'});
 		expect(result.status).toBe(0);
-		const parsed = JSON.parse(result.stdout) as {taglines: Array<{text: string; rationale: string}>};
-		expect(Array.isArray(parsed.taglines)).toBe(true);
-		expect(parsed.taglines).toHaveLength(5);
-		for (const tagline of parsed.taglines) {
-			expect(typeof tagline.text).toBe('string');
-			expect(typeof tagline.rationale).toBe('string');
-			expect(tagline.rationale.length).toBeGreaterThan(0);
+		const raw: unknown = JSON.parse(result.stdout);
+		if (!raw || typeof raw !== 'object') {
+			throw new Error('tagline stdout not an object');
+		}
+
+		const parsed: Record<string, unknown> = {...raw};
+		const taglines: unknown[] = Array.isArray(parsed.taglines) ? parsed.taglines : [];
+		expect(taglines).toHaveLength(5);
+		for (const tagline of taglines) {
+			if (!tagline || typeof tagline !== 'object') {
+				throw new Error('tagline entry not an object');
+			}
+
+			const t: Record<string, unknown> = {...tagline};
+			expect(typeof t.text).toBe('string');
+			expect(typeof t.rationale).toBe('string');
+			expect(String(t.rationale).length).toBeGreaterThan(0);
 		}
 	});
 
@@ -99,7 +109,12 @@ describe('tagline CLI --mock', () => {
 			{encoding: 'utf8'},
 		);
 		expect(result.status).toBe(0);
-		const parsed = JSON.parse(result.stdout) as {name: string; adjective: string};
+		const raw: unknown = JSON.parse(result.stdout);
+		if (!raw || typeof raw !== 'object') {
+			throw new Error('tagline stdout not an object');
+		}
+
+		const parsed: Record<string, unknown> = {...raw};
 		expect(parsed.name).toBe('Wranngle');
 		expect(parsed.adjective).toBe('bold');
 	});
