@@ -251,7 +251,9 @@ function parseKitArguments(args: string[]): KitOptions {
 		throw new Error('kit subcommand requires --color <hex>.');
 	}
 
-	return {name, color, outDir, typeStyle, ogTemplate};
+	return {
+		name, color, outDir, typeStyle, ogTemplate,
+	};
 }
 
 async function runKitCommand(args: string[]) {
@@ -260,7 +262,7 @@ async function runKitCommand(args: string[]) {
 	const manifest = await runKit(options);
 	const failed = manifest.steps.filter(s => s.status === 'failed');
 	for (const step of manifest.steps) {
-		const tag = step.status === 'ok' ? 'READY' : step.status === 'skipped' ? 'SKIP ' : 'FAIL ';
+		const tag = step.status === 'ok' ? 'READY' : (step.status === 'skipped' ? 'SKIP ' : 'FAIL ');
 		console.log(`[${tag}] ${step.artifact}${step.note ? ` — ${step.note}` : ''}`);
 	}
 

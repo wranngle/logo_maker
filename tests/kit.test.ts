@@ -7,7 +7,7 @@ import process from 'node:process';
 import {describe, expect, test} from 'bun:test';
 import {normalizeHex, runKit, slugify} from '../src/kit.js';
 
-async function makeTempDir(prefix: string): Promise<string> {
+async function makeTemporaryDir(prefix: string): Promise<string> {
 	return fs.mkdtemp(path.join(tmpdir(), `logo-maker-kit-${prefix}-`));
 }
 
@@ -29,14 +29,13 @@ const expectedArtifacts = [
 
 describe('logo-maker kit', () => {
 	test('happy path produces all 8 expected artifacts in out/<slug>/', async () => {
-		const out = await makeTempDir('happy');
+		const out = await makeTemporaryDir('happy');
 		const manifest = await runKit({name: 'Wranngle', color: '#00aa00', outDir: out});
 		expect(manifest.slug).toBe('wranngle');
 
 		const slugDir = path.join(out, 'wranngle');
-		for (const file of expectedArtifacts) {
-			const fullPath = path.join(slugDir, file);
-			const stat = await fs.stat(fullPath);
+		const stats = await Promise.all(expectedArtifacts.map(async file => fs.stat(path.join(slugDir, file))));
+		for (const stat of stats) {
 			expect(stat.size).toBeGreaterThan(0);
 		}
 
@@ -65,8 +64,8 @@ describe('logo-maker kit', () => {
 	});
 
 	test('determinism: same name + color produces identical palette.json', async () => {
-		const outA = await makeTempDir('det-a');
-		const outB = await makeTempDir('det-b');
+		const outA = await makeTemporaryDir('det-a');
+		const outB = await makeTemporaryDir('det-b');
 		const m1 = await runKit({name: 'Wranngle', color: '#00aa00', outDir: outA});
 		const m2 = await runKit({name: 'Wranngle', color: '#00aa00', outDir: outB});
 		expect(m1.slug).toBe(m2.slug);
@@ -81,7 +80,7 @@ describe('logo-maker kit', () => {
 	});
 
 	test('manifest steps include ok statuses for each round-1 dependency', async () => {
-		const out = await makeTempDir('deps');
+		const out = await makeTemporaryDir('deps');
 		const manifest = await runKit({name: 'Acme Inc', color: '#cf3c69', outDir: out});
 		const stepsByArtifact = new Map(manifest.steps.map(s => [s.artifact, s.status]));
 		expect(stepsByArtifact.get('logo.svg')).toBe('ok');
@@ -106,26 +105,35 @@ describe('logo-maker kit', () => {
 	});
 
 	test('kit.json is a valid manifest pointing at the steps', async () => {
-		const out = await makeTempDir('manifest');
+		const out = await makeTemporaryDir('manifest');
 		const m = await runKit({name: 'Wranngle', color: '#00aa00', outDir: out});
-		const kitJson = JSON.parse(await fs.readFile(path.join(out, m.slug, 'kit.json'), 'utf8')) as {name: string; slug: string; steps: unknown[]};
+		const raw: unknown = JSON.parse(await fs.readFile(path.join(out, m.slug, 'kit.json'), 'utf8'));
+		if (!raw || typeof raw !== 'object') {
+			throw new Error('kit.json not an object');
+		}
+
+		const kitJson: Record<string, unknown> = {...raw};
 		expect(kitJson.name).toBe('Wranngle');
 		expect(kitJson.slug).toBe('wranngle');
-		expect(kitJson.steps.length).toBeGreaterThanOrEqual(8);
+		const steps = Array.isArray(kitJson.steps) ? kitJson.steps : [];
+		expect(steps.length >= 8).toBe(true);
 	});
 
 	test('README.md links every expected artifact', async () => {
-		const out = await makeTempDir('readme');
+		const out = await makeTemporaryDir('readme');
 		const m = await runKit({name: 'Wranngle', color: '#00aa00', outDir: out});
 		const readme = await fs.readFile(path.join(out, m.slug, 'README.md'), 'utf8');
 		for (const file of expectedArtifacts) {
-			if (file === 'README.md') continue;
+			if (file === 'README.md') {
+				continue;
+			}
+
 			expect(readme).toContain(file);
 		}
 	});
 
 	test('logo.png decodes as a real PNG (signature)', async () => {
-		const out = await makeTempDir('png');
+		const out = await makeTemporaryDir('png');
 		const m = await runKit({name: 'Wranngle', color: '#00aa00', outDir: out});
 		const buffer = await fs.readFile(path.join(out, m.slug, 'logo.png'));
 		const signature = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);

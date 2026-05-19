@@ -5,7 +5,9 @@ import sharp from 'sharp';
 import {ensureDir} from './utils.js';
 import {generateEssentialFavicons} from './generator.js';
 import {generateManifest} from './manifest.js';
-import {extractPalette, paletteToCss, paletteToJson, type PaletteColor} from './palette.js';
+import {
+	extractPalette, paletteToCss, paletteToJson, type PaletteColor,
+} from './palette.js';
 import {recommendPairing, type TypeStyle, type FontPairing} from './types.js';
 import {renderOgTemplate} from './og.js';
 import {generateBrandBook, type BrandBookSwatch} from './brand-book.js';
@@ -37,12 +39,12 @@ export type KitManifest = {
 	steps: KitStepResult[];
 };
 
-const hexRe = /^#([0-9a-fA-F]{6})$/;
+const hexRe = /^#([\da-fA-F]{6})$/v;
 
 export function slugify(name: string): string {
 	const lowered = name.toLowerCase();
 	const collapsed = lowered.replaceAll(/[^a-z0-9]+/gv, '-');
-	const trimmed = collapsed.replace(/^-+|-+$/gv, '');
+	const trimmed = collapsed.replaceAll(/^-+|-+$/gv, '');
 	return trimmed || 'kit';
 }
 
@@ -76,7 +78,7 @@ function hexToRgb(hex: string): [number, number, number] {
 
 function pickInkColor(hex: string): string {
 	const [r, g, b] = hexToRgb(hex);
-	const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+	const luminance = ((0.299 * r) + (0.587 * g) + (0.114 * b)) / 255;
 	return luminance > 0.55 ? wranngleColors.night950 : wranngleColors.sand50;
 }
 
@@ -156,13 +158,15 @@ export async function runKit(options: KitOptions): Promise<KitManifest> {
 	await fs.writeFile(logoSvgPath, svg);
 	steps.push({step: 'wordmark', artifact: 'logo.svg', status: 'ok'});
 
-	let logoPngBuffer: Buffer | undefined;
+	let logoPngBuffer: Uint8Array | undefined;
 	try {
 		logoPngBuffer = await sharp(Buffer.from(svg)).resize(1024, 1024, {fit: 'contain'}).png().toBuffer();
 		await fs.writeFile(logoPngPath, logoPngBuffer);
 		steps.push({step: 'png', artifact: 'logo.png', status: 'ok'});
 	} catch (error) {
-		steps.push({step: 'png', artifact: 'logo.png', status: 'failed', note: errorMessage(error)});
+		steps.push({
+			step: 'png', artifact: 'logo.png', status: 'failed', note: errorMessage(error),
+		});
 	}
 
 	if (logoPngBuffer) {
@@ -177,10 +181,14 @@ export async function runKit(options: KitOptions): Promise<KitManifest> {
 			});
 			steps.push({step: 'manifest', artifact: 'site.webmanifest', status: 'ok'});
 		} catch (error) {
-			steps.push({step: 'favicons', artifact: 'favicon.ico', status: 'failed', note: errorMessage(error)});
+			steps.push({
+				step: 'favicons', artifact: 'favicon.ico', status: 'failed', note: errorMessage(error),
+			});
 		}
 	} else {
-		steps.push({step: 'favicons', artifact: 'favicon.ico', status: 'skipped', note: 'logo.png missing'});
+		steps.push({
+			step: 'favicons', artifact: 'favicon.ico', status: 'skipped', note: 'logo.png missing',
+		});
 	}
 
 	let palette: PaletteColor[] = [];
@@ -193,12 +201,16 @@ export async function runKit(options: KitOptions): Promise<KitManifest> {
 			await fs.writeFile(paletteCssPath, paletteToCss(palette));
 			steps.push({step: 'palette', artifact: 'palette.json', status: 'ok'});
 		} catch (error) {
-			steps.push({step: 'palette', artifact: 'palette.json', status: 'failed', note: errorMessage(error)});
+			steps.push({
+				step: 'palette', artifact: 'palette.json', status: 'failed', note: errorMessage(error),
+			});
 		} finally {
 			await fs.unlink(seedPath).catch(() => undefined);
 		}
 	} else {
-		steps.push({step: 'palette', artifact: 'palette.json', status: 'skipped', note: 'logo.png missing'});
+		steps.push({
+			step: 'palette', artifact: 'palette.json', status: 'skipped', note: 'logo.png missing',
+		});
 	}
 
 	const pairing = recommendPairing(typeStyle);
@@ -207,7 +219,9 @@ export async function runKit(options: KitOptions): Promise<KitManifest> {
 		await fs.writeFile(typePairingPath, `${JSON.stringify(payload, undefined, 2)}\n`);
 		steps.push({step: 'type-pairing', artifact: 'type-pairing.json', status: 'ok'});
 	} catch (error) {
-		steps.push({step: 'type-pairing', artifact: 'type-pairing.json', status: 'failed', note: errorMessage(error)});
+		steps.push({
+			step: 'type-pairing', artifact: 'type-pairing.json', status: 'failed', note: errorMessage(error),
+		});
 	}
 
 	if (logoPngBuffer) {
@@ -216,10 +230,14 @@ export async function runKit(options: KitOptions): Promise<KitManifest> {
 			await fs.writeFile(ogPath, buffer);
 			steps.push({step: 'og', artifact: 'og.png', status: 'ok'});
 		} catch (error) {
-			steps.push({step: 'og', artifact: 'og.png', status: 'failed', note: errorMessage(error)});
+			steps.push({
+				step: 'og', artifact: 'og.png', status: 'failed', note: errorMessage(error),
+			});
 		}
 	} else {
-		steps.push({step: 'og', artifact: 'og.png', status: 'skipped', note: 'logo.png missing'});
+		steps.push({
+			step: 'og', artifact: 'og.png', status: 'skipped', note: 'logo.png missing',
+		});
 	}
 
 	if (logoPngBuffer) {
@@ -239,12 +257,16 @@ export async function runKit(options: KitOptions): Promise<KitManifest> {
 			});
 			steps.push({step: 'brand-book', artifact: 'brand-book.pdf', status: 'ok'});
 		} catch (error) {
-			steps.push({step: 'brand-book', artifact: 'brand-book.pdf', status: 'failed', note: errorMessage(error)});
+			steps.push({
+				step: 'brand-book', artifact: 'brand-book.pdf', status: 'failed', note: errorMessage(error),
+			});
 		} finally {
 			await fs.unlink(seedPath).catch(() => undefined);
 		}
 	} else {
-		steps.push({step: 'brand-book', artifact: 'brand-book.pdf', status: 'skipped', note: 'logo.png missing'});
+		steps.push({
+			step: 'brand-book', artifact: 'brand-book.pdf', status: 'skipped', note: 'logo.png missing',
+		});
 	}
 
 	const manifest: KitManifest = {
