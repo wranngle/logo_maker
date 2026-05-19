@@ -28,7 +28,7 @@ jobs:
       - name: regenerate assets
         run: bun run generate -- raw/logo-data-url.txt --output output
       - name: upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: brand-assets
           path: output/
