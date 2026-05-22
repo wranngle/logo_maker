@@ -72,3 +72,6 @@ out/
 *.png
 *.webp
 output/
+
+# git_good runtime (per dotfiles doctrine)
+.artifacts/
