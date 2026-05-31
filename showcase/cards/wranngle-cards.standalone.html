@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Wranngle Feature Cards — Animation Variants</title>
+<style>
+  :root{
+    --s500:#ff5f00;
+    --night-950:#12111a;
+    --night-900:#1a1822;
+    --night-800:#26222e;
+    --sand:#fcfaf5;
+    --ink:rgba(252,250,245,.86);
+    --ink-dim:rgba(252,250,245,.5);
+    --ink-faint:rgba(252,250,245,.32);
+    --line:rgba(255,95,0,.18);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{min-height:100vh;background:var(--night-950);color:var(--ink);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+    font-feature-settings:"ss01","ss02"}
+  body{padding:48px 24px}
+
+  /* section header mirrors wranngle.com #features intro tone (paraphrased, not copied) */
+  .intro{max-width:1200px;margin:0 auto 48px}
+  .intro h2{font-family:"Space Mono",ui-monospace,monospace;font-weight:700;
+    font-size:clamp(28px,4vw,52px);line-height:1.05;letter-spacing:-0.01em;color:var(--sand)}
+  .intro h2 b{color:var(--s500);font-weight:700}
+  .intro p{margin-top:14px;color:var(--ink-dim);max-width:560px;font-size:14px;line-height:1.5}
+
+  .grid{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
+  @media (max-width:980px){.grid{grid-template-columns:1fr}}
+
+  /* card matches the structure pinchgrab captured: noise-overlay div, header pill, animation, copy */
+  .card{position:relative;background:var(--night-900);border:1px solid var(--line);border-radius:14px;
+    overflow:hidden;min-height:491px;display:flex;flex-direction:column}
+  .card::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+    background:radial-gradient(circle at 50% 50%,rgba(255,95,0,0.03),transparent 70%)}
+  .card .noise{position:absolute;inset:0;pointer-events:none;opacity:.6;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence baseFrequency='0.95' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.55'/></svg>")}
+
+  .card header{position:relative;z-index:2;display:flex;justify-content:space-between;align-items:center;
+    padding:16px 18px 12px;font-family:"Space Mono",ui-monospace,monospace;font-size:10px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--s500)}
+  .badge{border:1px solid rgba(255,95,0,.3);background:rgba(255,95,0,.05);padding:3px 8px;border-radius:5px}
+  .stat{display:inline-flex;align-items:center;gap:7px;color:var(--ink-dim)}
+  .stat i{width:6px;height:6px;border-radius:50%;background:#5d8c61;box-shadow:0 0 8px #5d8c61;
+    animation:blink 2.2s ease-in-out infinite}
+  @keyframes blink{0%,60%,100%{opacity:1}80%{opacity:.4}}
+
+  .anim-frame{position:relative;z-index:2;margin:6px 18px 4px;height:282px;
+    border:1px solid rgba(255,95,0,.08);border-radius:10px;background:#0c0b14;overflow:hidden}
+  .anim-frame canvas{display:block;width:100%;height:100%}
+
+  .copy{position:relative;z-index:2;padding:22px 22px 24px;margin-top:auto}
+  .copy h3{font-family:"Space Mono",ui-monospace,monospace;font-weight:700;font-size:22px;
+    color:var(--sand);letter-spacing:-0.005em;margin-bottom:8px}
+  .copy p{font-size:13px;line-height:1.55;color:var(--ink-dim)}
+  .copy .ph{color:var(--ink-faint);font-style:italic}
+
+  .legend{max-width:1200px;margin:48px auto 0;color:var(--ink-faint);font-size:11px;letter-spacing:.06em;
+    font-family:"Space Mono",ui-monospace,monospace;text-align:center;line-height:1.7}
+  .legend a{color:var(--s500);text-decoration:none}
+
+  /* layout-fits-canvas, no jank during loop */
+  canvas{image-rendering:auto}
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h2>The agent <b>answers</b>, <b>qualifies</b>, and <b>routes</b><br>every call.</h2>
+  <p>Three animation variants built to replace the placeholder visuals at <code>#features</code>. Each card animation is a pure function of time — drop the canvas + render fn straight into the React card.</p>
+</div>
+
+<section class="grid">
+  <article class="card">
+    <div class="noise"></div>
+    <header>
+      <span class="badge">MOD_01 // 24_7_COVERAGE</span>
+      <span class="stat"><i></i>ANSWERING</span>
+    </header>
+    <div class="anim-frame"><canvas data-anim="coverage"></canvas></div>
+    <div class="copy">
+      <h3 class="ph">[ card title ]</h3>
+      <p class="ph">Your existing card copy stays as-is. The variant only swaps the visual above.</p>
+    </div>
+  </article>
+
+  <article class="card">
+    <div class="noise"></div>
+    <header>
+      <span class="badge">MOD_02 // LEAD_QUALITY</span>
+      <span class="stat"><i></i>FILTERING</span>
+    </header>
+    <div class="anim-frame"><canvas data-anim="qualify"></canvas></div>
+    <div class="copy">
+      <h3 class="ph">[ card title ]</h3>
+      <p class="ph">Your existing card copy stays as-is. The variant only swaps the visual above.</p>
+    </div>
+  </article>
+
+  <article class="card">
+    <div class="noise"></div>
+    <header>
+      <span class="badge">MOD_03 // INSTANT_HANDOFF</span>
+      <span class="stat"><i></i>CONNECTED</span>
+    </header>
+    <div class="anim-frame"><canvas data-anim="handoff"></canvas></div>
+    <div class="copy">
+      <h3 class="ph">[ card title ]</h3>
+      <p class="ph">Your existing card copy stays as-is. The variant only swaps the visual above.</p>
+    </div>
+  </article>
+</section>
+
+<div class="legend">
+  3 looping card animations · canvas 2D, additive blend · self-contained, no deps · deterministic loops · <a href="../lasso-reveal.standalone.html?ui=1">open the full lasso reveal →</a>
+</div>
+
+<script>/* Wranngle feature-card animations — shared kernel.
+   Three pure render functions of (ctx, w, h, t). Loops are exact: state is derived
+   from t each frame, no integration drift, no per-card scheduling. */
+
+(function () {
+  const TAU = Math.PI * 2;
+  const clamp01 = (x) => x < 0 ? 0 : x > 1 ? 1 : x;
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const easeOut = (x) => 1 - Math.pow(1 - x, 3);
+  // deterministic hash → [0,1)
+  const hash = (i, salt) => { const x = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453; return x - Math.floor(x); };
+
+  /* --- brand palette --- */
+  const SUNSET = "255,95,0";        // #ff5f00
+  const SAND   = "252,250,245";
+
+  /* --------------------------------------------------------------- shared paint helpers */
+  function bg(ctx, w, h) {
+    // canvas is already clear; lay down the same radial sunset tint the site uses on #features
+    const g = ctx.createRadialGradient(w/2, h*0.55, 0, w/2, h*0.55, Math.max(w, h)*0.95);
+    g.addColorStop(0, `rgba(${SUNSET},0.05)`);
+    g.addColorStop(0.6, `rgba(${SUNSET},0.012)`);
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+  }
+  function additive(ctx, fn) {
+    const prev = ctx.globalCompositeOperation;
+    ctx.globalCompositeOperation = "lighter";
+    fn();
+    ctx.globalCompositeOperation = prev;
+  }
+  function glowDot(ctx, x, y, r, alpha, color = SUNSET) {
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `rgba(${color},${alpha})`);
+    g.addColorStop(0.4, `rgba(${color},${alpha*0.6})`);
+    g.addColorStop(1, `rgba(${color},0)`);
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+  }
+  function ropeSegment(ctx, x0, y0, x1, y1, width, alpha) {
+    // a glowing 2-pass stroke — outer halo, inner core
+    ctx.lineCap = "round";
+    ctx.strokeStyle = `rgba(${SUNSET},${alpha*0.35})`;
+    ctx.lineWidth = width * 3; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    ctx.strokeStyle = `rgba(${SAND},${alpha*0.85})`;
+    ctx.lineWidth = width;     ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+  }
+  // draws a cubic ribbon as N small additive segments with width/alpha falling off at the tip
+  function ropeRibbon(ctx, points, baseAlpha, taper = true) {
+    if (points.length < 2) return;
+    additive(ctx, () => {
+      for (let i = 0; i < points.length - 1; i++) {
+        const k = i / (points.length - 1);
+        const a = taper ? baseAlpha * (1 - k) : baseAlpha;
+        const w = taper ? 1.6 * (1 - k * 0.7) + 0.4 : 1.6;
+        ropeSegment(ctx, points[i][0], points[i][1], points[i+1][0], points[i+1][1], w, a);
+      }
+    });
+  }
+  function scanlines(ctx, w, h) {
+    additive(ctx, () => {
+      ctx.fillStyle = `rgba(0,0,0,0.16)`;
+      for (let y = 0; y < h; y += 2) ctx.fillRect(0, y, w, 1);
+    });
+  }
+
+  /* --------------------------------------------------------------- 1 / COVERAGE
+     Clock face. Hour hand sweeps. A rope-comet orbits the ring. Every beat (12 per loop)
+     a "ring" event flashes at the hand's position — that's a phone caught. Counter ticks. */
+  function coverage(ctx, w, h, t) {
+    const LOOP = 6.0;
+    const phase = (t % LOOP) / LOOP;            // 0..1
+    bg(ctx, w, h);
+
+    const cx = w / 2, cy = h / 2 - 6, R = Math.min(w, h) * 0.35;
+
+    // outer dim ring
+    ctx.strokeStyle = `rgba(${SUNSET},0.22)`; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = `rgba(${SAND},0.06)`;
+    ctx.beginPath(); ctx.arc(cx, cy, R + 6, 0, TAU); ctx.stroke();
+
+    // 12 tick marks
+    for (let i = 0; i < 12; i++) {
+      const a = i / 12 * TAU - Math.PI / 2;
+      const major = (i % 3 === 0);
+      const r1 = R - (major ? 8 : 4), r2 = R - 1;
+      ctx.strokeStyle = major ? `rgba(${SUNSET},0.55)` : `rgba(${SAND},0.18)`;
+      ctx.lineWidth = major ? 1.5 : 1;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
+      ctx.lineTo(cx + Math.cos(a) * r2, cy + Math.sin(a) * r2);
+      ctx.stroke();
+    }
+
+    // catches: 12 per loop, each at hand position at that moment, with a fade trail
+    additive(ctx, () => {
+      for (let i = 0; i < 12; i++) {
+        const at = i / 12;                         // when this catch fires (in [0,1))
+        let dt = phase - at; if (dt < 0) dt += 1;  // time since this catch, wrapped
+        if (dt > 0.18) continue;
+        const k = 1 - dt / 0.18;
+        const ha = at * TAU - Math.PI / 2;         // hand angle at moment of catch
+        const x = cx + Math.cos(ha) * R, y = cy + Math.sin(ha) * R;
+        glowDot(ctx, x, y, 14 + (1 - k) * 26, k * 0.85);
+        // hard core spark on the very first frames
+        if (k > 0.7) glowDot(ctx, x, y, 3, (k - 0.7) / 0.3, SAND);
+      }
+    });
+
+    // hour hand (sweeps once per loop)
+    const ang = phase * TAU - Math.PI / 2;
+    const hx = cx + Math.cos(ang) * (R - 14), hy = cy + Math.sin(ang) * (R - 14);
+    ctx.strokeStyle = `rgba(${SAND},0.55)`; ctx.lineWidth = 1.5; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(hx, hy); ctx.stroke();
+    additive(ctx, () => glowDot(ctx, hx, hy, 5, 0.7));
+
+    // rope comet — orbits at 2× hand speed
+    const TRAIL = 28;
+    const comet = phase * 2 * TAU - Math.PI / 2;
+    const pts = [];
+    for (let i = 0; i < TRAIL; i++) {
+      const a = comet - i * 0.07;
+      pts.push([cx + Math.cos(a) * R, cy + Math.sin(a) * R]);
+    }
+    ropeRibbon(ctx, pts, 0.85);
+    additive(ctx, () => glowDot(ctx, pts[0][0], pts[0][1], 6.5, 1));
+
+    // center hub
+    ctx.fillStyle = `rgba(${SUNSET},0.9)`; ctx.beginPath(); ctx.arc(cx, cy, 2.2, 0, TAU); ctx.fill();
+
+    // small "24/7" label
+    ctx.font = "600 9.5px 'Space Mono', ui-monospace, monospace";
+    ctx.fillStyle = `rgba(${SAND},0.4)`;
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    ctx.fillText("24/7", cx, cy + R + 14);
+
+    // tally — increments by 1 per catch.  base + 12 * loopsCompleted + catchesThisLoop
+    const loops = Math.floor(t / LOOP);
+    const caughtThisLoop = Math.floor(phase * 12);
+    const tally = 1247 + loops * 12 + caughtThisLoop;
+    ctx.font = "500 9px 'Space Mono', ui-monospace, monospace";
+    ctx.fillStyle = `rgba(${SAND},0.32)`;
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    ctx.fillText("CALLS CAUGHT", 14, h - 14);
+    ctx.fillStyle = `rgba(${SUNSET},0.92)`;
+    ctx.textAlign = "right";
+    ctx.fillText(tally.toLocaleString(), w - 14, h - 14);
+
+    scanlines(ctx, w, h);
+  }
+
+  /* --------------------------------------------------------------- 2 / QUALIFY
+     Vertical stream of leads. A horizontal rope-loop sieve at y0. Deterministic
+     keep/pass per lead. Caught leads brighten to orange and deflect into the
+     bottom-right pile. The rope dips at impact like real tension. */
+  function qualify(ctx, w, h, t) {
+    bg(ctx, w, h);
+
+    const LEAD_FALL = 4.2;          // seconds top → bottom
+    const N = 14;                   // leads alive at once
+    const SIEVE_Y = h * 0.5;
+    const KEEP_RATE = 0.62;
+
+    // collect events first so we can dip the rope correctly
+    const events = [];     // {x, intensity 0..1, keep}
+    const trails = [];     // for caught particles flying to the pile
+
+    for (let i = 0; i < N; i++) {
+      const offset = i / N;
+      const t0 = ((t / LEAD_FALL) + offset) % 1;     // [0,1)
+      const x = lerp(w * 0.18, w * 0.82, hash(i, 1));
+      const keep = hash(i, 2) < KEEP_RATE;
+      const yRaw = t0 * h;
+      const passedSieve = yRaw > SIEVE_Y;
+
+      // before sieve: dim white-blue dot falling
+      if (!passedSieve) {
+        additive(ctx, () => {
+          glowDot(ctx, x, yRaw, 6, 0.32, "190,200,220");
+          glowDot(ctx, x, yRaw, 2, 0.9, SAND);
+        });
+      } else {
+        // moment of impact at SIEVE_Y → time since: figure out how long ago in t0 space
+        const dyPx = yRaw - SIEVE_Y;
+        const sinceSieve = dyPx / h * LEAD_FALL;     // seconds since hitting rope
+        if (sinceSieve < 0.45) {
+          events.push({ x, intensity: clamp01(1 - sinceSieve / 0.45), keep });
+        }
+        if (keep) {
+          // caught: arc to bottom-right pile
+          const k = clamp01(sinceSieve / 0.9);
+          const targetX = w - 24, targetY = h - 22;
+          const px = lerp(x, targetX, easeOut(k));
+          const py = lerp(SIEVE_Y, targetY, easeOut(k));
+          const a = 1 - k * 0.55;
+          additive(ctx, () => {
+            glowDot(ctx, px, py, 7, a * 0.9);
+            glowDot(ctx, px, py, 2.2, a, SAND);
+          });
+          // brief tail
+          trails.push([x, SIEVE_Y, px, py, a]);
+          // pile contribution settled at k≈1; no per-frame counter needed (display uses analytic count)
+        } else {
+          // pass-through: continue falling, fade out
+          const k = clamp01((sinceSieve - 0.05) / 0.7);
+          const py = yRaw;
+          if (py < h - 6) {
+            additive(ctx, () => {
+              glowDot(ctx, x, py, 5, 0.22 * (1 - k), "150,160,180");
+              glowDot(ctx, x, py, 1.6, 0.7 * (1 - k), SAND);
+            });
+          }
+        }
+      }
+    }
+
+    // the rope-loop sieve: a wavy horizontal cord stretched across, breathing on t
+    const SAMPLES = 80;
+    const dipFn = (xPx) => {
+      let dip = 0;
+      for (const ev of events) {
+        const dx = (xPx - ev.x) / 36;
+        const fall = Math.exp(-dx * dx);
+        dip += fall * 14 * ev.intensity;
+      }
+      return dip;
+    };
+    const pts = [];
+    const breath = Math.sin(t * 1.4) * 1.5;
+    for (let i = 0; i <= SAMPLES; i++) {
+      const x = lerp(w * 0.08, w * 0.92, i / SAMPLES);
+      const ph = i / SAMPLES * TAU * 1.5 + t * 0.6;
+      const y = SIEVE_Y + Math.sin(ph) * 1.6 + breath + dipFn(x);
+      pts.push([x, y]);
+    }
+    additive(ctx, () => {
+      for (let i = 0; i < pts.length - 1; i++) {
+        ropeSegment(ctx, pts[i][0], pts[i][1], pts[i+1][0], pts[i+1][1], 1.4, 0.82);
+      }
+      // bright knot at each end
+      glowDot(ctx, pts[0][0], pts[0][1], 4, 0.9);
+      glowDot(ctx, pts[pts.length-1][0], pts[pts.length-1][1], 4, 0.9);
+    });
+
+    // brief caught trails
+    additive(ctx, () => {
+      for (const [x0, y0, x1, y1, a] of trails) {
+        ropeSegment(ctx, x0, y0, x1, y1, 1, a * 0.4);
+      }
+    });
+
+    // qualified pile (small dim cluster near bottom-right)
+    additive(ctx, () => {
+      for (let i = 0; i < 6; i++) {
+        const dx = (hash(i, 7) - .5) * 14, dy = (hash(i, 8) - .5) * 8;
+        glowDot(ctx, w - 24 + dx, h - 22 + dy, 4, 0.32);
+      }
+    });
+
+    // labels
+    ctx.font = "500 9px 'Space Mono', ui-monospace, monospace";
+    ctx.fillStyle = `rgba(${SAND},0.32)`;
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    ctx.fillText("LEAD QUALITY", 14, 18);
+    ctx.fillText("QUALIFIED", 14, h - 14);
+    ctx.fillStyle = `rgba(${SUNSET},0.92)`;
+    ctx.textAlign = "right";
+    // running counts shown in the moment — clamp so they read as sensible
+    const passSeen = Math.floor((t / LEAD_FALL) * N);
+    const keptSeen = Math.floor(passSeen * KEEP_RATE);
+    ctx.fillText(`${keptSeen} / ${passSeen}`, w - 14, h - 14);
+
+    // sieve label hint
+    ctx.font = "500 8.5px 'Space Mono', ui-monospace, monospace";
+    ctx.fillStyle = `rgba(${SAND},0.22)`;
+    ctx.textAlign = "right";
+    ctx.fillText("SIEVE", w - 14, SIEVE_Y - 6);
+
+    scanlines(ctx, w, h);
+  }
+
+  /* --------------------------------------------------------------- 3 / HANDOFF
+     Four-phase loop: incoming call (pulsing ring) → rope whip arc → connection
+     ignition → settled glow → reset. */
+  function handoff(ctx, w, h, t) {
+    const LOOP = 4.0;
+    const ph = (t % LOOP) / LOOP;       // 0..1
+    bg(ctx, w, h);
+
+    const L = { x: w * 0.18, y: h * 0.5 }, R = { x: w * 0.82, y: h * 0.5 };
+
+    // phase windows
+    const whipP     = clamp01((ph - 0.18) / 0.36);   // 0.18..0.54: rope arc
+    const ignite    = clamp01((ph - 0.54) / 0.10);   // 0.54..0.64: ignition flash
+    const settled   = clamp01((ph - 0.64) / 0.30);   // 0.64..0.94: settled link
+    const fadeOut   = clamp01((ph - 0.94) / 0.06);   // 0.94..1   : fade
+
+    // === left orb: incoming phone — concentric rings expand during phase A
+    additive(ctx, () => {
+      for (let i = 0; i < 3; i++) {
+        const k = ((ph * 2 + i * 0.33) % 1);
+        const r = 8 + k * 30;
+        const a = (1 - k) * 0.45 * (1 - clamp01((ph - 0.20) / 0.10));
+        if (a > 0.01) {
+          ctx.strokeStyle = `rgba(${SUNSET},${a})`;
+          ctx.lineWidth = 1.2;
+          ctx.beginPath(); ctx.arc(L.x, L.y, r, 0, TAU); ctx.stroke();
+        }
+      }
+      glowDot(ctx, L.x, L.y, 11, 0.55 + 0.35 * Math.sin(t * 9));
+      glowDot(ctx, L.x, L.y, 3.4, 1, SAND);
+    });
+    // tiny phone glyph (handset shape, ~10px)
+    ctx.strokeStyle = `rgba(${SAND},0.88)`; ctx.lineWidth = 1.2; ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(L.x - 3.5, L.y - 3.5);
+    ctx.quadraticCurveTo(L.x, L.y, L.x + 3.5, L.y + 3.5);
+    ctx.stroke();
+
+    // === right orb: handler — dim until connected, then ignites
+    const rAlpha = 0.25 + (ignite + settled * 0.8 - fadeOut) * 0.8;
+    additive(ctx, () => {
+      glowDot(ctx, R.x, R.y, 11 + ignite * 18, rAlpha);
+      glowDot(ctx, R.x, R.y, 3.4, Math.max(0.5, rAlpha), SAND);
+    });
+    // tiny human glyph (head + shoulders)
+    ctx.strokeStyle = `rgba(${SAND},${0.45 + rAlpha * 0.45})`; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.arc(R.x, R.y - 2.5, 2.2, 0, TAU); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(R.x - 4, R.y + 5); ctx.quadraticCurveTo(R.x, R.y + 1, R.x + 4, R.y + 5);
+    ctx.stroke();
+
+    // === rope arc — drawn progressively in phase B, held + ignited in C/D, faded in E
+    if (ph > 0.18) {
+      const segP = whipP;
+      const settleP = clamp01(ignite + settled - fadeOut);
+      // bezier control points: arc up and over
+      const arcUp = -h * 0.28;
+      const C1 = [lerp(L.x, R.x, 0.30), L.y + arcUp];
+      const C2 = [lerp(L.x, R.x, 0.70), R.y + arcUp];
+      const PROG = Math.max(segP, settleP);
+      const N = 64;
+      const ribbon = [];
+      const head = Math.floor(N * PROG);
+      for (let i = 0; i <= head; i++) {
+        const u = i / N;
+        const x = (1-u)**3 * L.x + 3*(1-u)**2*u * C1[0] + 3*(1-u)*u*u * C2[0] + u**3 * R.x;
+        const y = (1-u)**3 * L.y + 3*(1-u)**2*u * C1[1] + 3*(1-u)*u*u * C2[1] + u**3 * R.y;
+        ribbon.push([x, y]);
+      }
+      const baseAlpha = lerp(0.5, 1.0, settleP) * (1 - fadeOut);
+      additive(ctx, () => {
+        for (let i = 0; i < ribbon.length - 1; i++) {
+          // taper toward the trailing edge during whip; uniform when settled
+          const k = i / Math.max(1, ribbon.length - 1);
+          const taper = lerp(easeOut(k), 1, settleP);
+          ropeSegment(ctx, ribbon[i][0], ribbon[i][1], ribbon[i+1][0], ribbon[i+1][1],
+            1.4, baseAlpha * taper);
+        }
+        // bright comet head while whipping
+        if (segP < 1 && ribbon.length) {
+          const head = ribbon[ribbon.length - 1];
+          glowDot(ctx, head[0], head[1], 9, (1 - segP) * 0.4 + 0.6);
+          glowDot(ctx, head[0], head[1], 3, 1, SAND);
+        }
+      });
+    }
+
+    // === ignition flash on landing
+    if (ignite > 0 && settled < 1) {
+      additive(ctx, () => glowDot(ctx, R.x, R.y, 24 + (1 - ignite) * 18, ignite * 0.85, SAND));
+    }
+
+    // === status line — INCOMING / ROUTING / CONNECTED
+    let status = "INCOMING";
+    if (ph > 0.54) status = "CONNECTED";
+    else if (ph > 0.18) status = "ROUTING";
+    ctx.font = "500 9px 'Space Mono', ui-monospace, monospace";
+    ctx.fillStyle = `rgba(${SAND},0.32)`;
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    ctx.fillText("STATUS", 14, h - 14);
+    ctx.fillStyle = ph > 0.54 ? `rgba(${SUNSET},0.92)` : `rgba(${SAND},0.78)`;
+    ctx.textAlign = "right";
+    ctx.fillText(status, w - 14, h - 14);
+
+    scanlines(ctx, w, h);
+  }
+
+  window.WranngleCardAnims = { coverage, qualify, handoff };
+})();</script>
+<script>
+(function () {
+  const ROUTINES = window.WranngleCardAnims;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const canvases = [...document.querySelectorAll("canvas[data-anim]")].map((cv) => {
+    const ctx = cv.getContext("2d", { alpha: false });
+    const fn = ROUTINES[cv.dataset.anim];
+    return { cv, ctx, fn };
+  });
+
+  function resizeAll(){
+    for (const { cv, ctx } of canvases){
+      const rect = cv.parentElement.getBoundingClientRect();
+      cv.width  = Math.max(1, Math.round(rect.width  * dpr));
+      cv.height = Math.max(1, Math.round(rect.height * dpr));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+  }
+  resizeAll();
+  window.addEventListener("resize", resizeAll);
+
+  // ?t=<sec>&play=0  for screenshot determinism
+  const q = new URLSearchParams(location.search);
+  const t0 = q.has("t") ? parseFloat(q.get("t")) : 0;
+  const playing = q.get("play") !== "0";
+  let last = performance.now(), tNow = isFinite(t0) ? t0 : 0;
+
+  function frame(now){
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (playing) tNow += dt;
+    for (const { cv, ctx, fn } of canvases){
+      const w = cv.width / dpr, h = cv.height / dpr;
+      ctx.fillStyle = "#0c0b14"; ctx.fillRect(0, 0, w, h);
+      try { fn(ctx, w, h, tNow); } catch (e) { console.error(e); }
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

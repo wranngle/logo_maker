@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>Wranngle — Lasso Reveal</title>
+<style>
+  :root{
+    --sunset:#ff5f00; --night:#12111a; --sand:#fcfaf5; --violet:#cf3c69;
+    --ink:rgba(252,250,245,.92); --ink-dim:rgba(252,250,245,.42);
+    --panel:rgba(16,15,23,.82); --line:rgba(255,95,0,.16);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:#000;overflow:hidden;
+    font-family:"Space Mono",ui-monospace,"DejaVu Sans Mono",monospace}
+  #scene{position:fixed;inset:0;display:block}
+  #vignette{position:fixed;inset:0;pointer-events:none;
+    background:radial-gradient(120% 90% at 50% 44%, transparent 40%, rgba(6,5,11,.5) 80%, rgba(2,2,5,.9) 100%);
+    mix-blend-mode:multiply}
+  #brand{position:fixed;left:30px;top:26px;color:var(--ink);user-select:none;pointer-events:none;
+    letter-spacing:.42em;font-size:12px;text-transform:uppercase;opacity:0;transition:opacity .8s ease}
+  #brand b{color:var(--sunset);font-weight:700}
+  #brand .sub{display:block;margin-top:6px;letter-spacing:.2em;font-size:9.5px;color:var(--ink-dim)}
+  body.lit #brand{opacity:1}
+  /* Card mode (default): hide wordmark + transport. Append ?ui=1 to bring them back. */
+  body:not(.ui) #brand,
+  body:not(.ui) #hud,
+  body:not(.ui) #gear,
+  body:not(.ui) #rack{display:none !important}
+
+  /* transport */
+  #hud{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);width:min(720px,calc(100vw - 40px));
+    display:flex;align-items:center;gap:13px;padding:11px 16px;border-radius:14px;
+    background:var(--panel);backdrop-filter:blur(14px);border:1px solid var(--line);
+    box-shadow:0 18px 50px rgba(0,0,0,.5);color:var(--ink);font-size:11px;
+    opacity:.16;transition:opacity .35s ease;z-index:5}
+  #hud:hover{opacity:1}
+  .btn{appearance:none;border:none;cursor:pointer;color:var(--ink);background:transparent;
+    width:30px;height:30px;border-radius:8px;display:grid;place-items:center;transition:.2s}
+  .btn:hover{background:rgba(255,95,0,.18);color:#fff}
+  .btn svg{width:15px;height:15px;fill:currentColor}
+  #scrub{flex:1;-webkit-appearance:none;height:4px;border-radius:4px;cursor:pointer;background:rgba(255,255,255,.14)}
+  #scrub::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;
+    background:var(--sand);box-shadow:0 0 0 3px rgba(255,95,0,.35);cursor:pointer}
+  #scrub::-moz-range-thumb{width:13px;height:13px;border:none;border-radius:50%;background:var(--sand);
+    box-shadow:0 0 0 3px rgba(255,95,0,.35);cursor:pointer}
+  #phase{min-width:120px;text-align:right;letter-spacing:.12em;text-transform:uppercase;font-size:10px;color:var(--ink-dim)}
+  #phase b{color:var(--sunset)}
+  .seg{font-variant-numeric:tabular-nums;color:var(--ink-dim);min-width:34px;text-align:center}
+
+  /* parameter rack */
+  #gear{position:fixed;right:24px;top:24px;z-index:7}
+  #rack{position:fixed;right:24px;top:64px;width:288px;max-height:calc(100vh - 96px);overflow:auto;
+    background:var(--panel);backdrop-filter:blur(16px);border:1px solid var(--line);border-radius:16px;
+    padding:16px 16px 18px;color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.55);display:none;z-index:7;
+    scrollbar-width:thin;scrollbar-color:rgba(255,95,0,.4) transparent}
+  #rack.open{display:block}
+  #rack::-webkit-scrollbar{width:8px}#rack::-webkit-scrollbar-thumb{background:rgba(255,95,0,.32);border-radius:8px}
+  #rack h3{font-size:10px;letter-spacing:.32em;text-transform:uppercase;color:var(--sunset);margin:0 0 12px}
+  .presetbar{display:flex;gap:6px;margin-bottom:14px}
+  #preset{flex:1;background:rgba(255,255,255,.05);color:var(--ink);border:1px solid var(--line);
+    border-radius:9px;padding:7px 8px;font:inherit;font-size:10px;letter-spacing:.06em;cursor:pointer}
+  .mini{border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--ink);border-radius:9px;
+    cursor:pointer;width:32px;display:grid;place-items:center;transition:.2s}
+  .mini:hover{background:rgba(255,95,0,.18);color:#fff}
+  .mini svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8}
+  .grp{margin-bottom:4px;border-top:1px solid rgba(255,255,255,.06);padding-top:11px;margin-top:11px}
+  .grp:first-of-type{border-top:none;margin-top:0;padding-top:0}
+  .grp h4{font-size:9px;letter-spacing:.28em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:10px}
+  .row{margin:0 0 11px}
+  .row .lab{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.05em;color:var(--ink-dim);margin-bottom:5px}
+  .row .lab .nm{color:rgba(252,250,245,.78)}
+  .row .lab .vl{color:var(--sunset);font-variant-numeric:tabular-nums}
+  .row input[type=range]{width:100%;-webkit-appearance:none;height:3px;border-radius:3px;background:rgba(255,255,255,.16);cursor:pointer}
+  .row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:var(--sunset);cursor:pointer}
+  .row input[type=range]::-moz-range-thumb{width:11px;height:11px;border:none;border-radius:50%;background:var(--sunset)}
+  .foot{font-size:9px;color:var(--ink-dim);letter-spacing:.04em;line-height:1.55;margin-top:6px}
+
+  #loader{position:fixed;inset:0;display:grid;place-items:center;background:#08070d;color:var(--ink-dim);
+    font-size:12px;letter-spacing:.3em;text-transform:uppercase;z-index:20;transition:opacity .6s}
+  #err{position:fixed;inset:0;display:none;place-items:center;background:#08070d;color:#ff8a5b;
+    text-align:center;padding:40px;font-size:13px;line-height:1.7;z-index:30}
+</style>
+</head>
+<body>
+  <div id="loader">wrangling the rope…</div>
+  <div id="err"></div>
+  <canvas id="scene"></canvas>
+  <div id="vignette"></div>
+
+  <div id="brand">w<b>r</b>anngle<span class="sub">lasso reveal · webgl</span></div>
+
+  <button id="gear" class="btn" title="Parameters">
+    <svg viewBox="0 0 24 24"><path d="M19.4 13a7.8 7.8 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.8 7.8 0 0 0-1.7-1l-.4-2.6H10.9l-.4 2.6a7.8 7.8 0 0 0-1.7 1l-2.4-1-2 3.4L4.6 11a7.8 7.8 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.8 7.8 0 0 0 1.7 1l.4 2.6h4.2l.4-2.6a7.8 7.8 0 0 0 1.7-1l2.4 1 2-3.4-2-1.6ZM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7Z"/></svg>
+  </button>
+
+  <div id="rack">
+    <h3>Lasso Reveal</h3>
+    <div class="presetbar">
+      <select id="preset" title="Looks"></select>
+      <button id="rand" class="mini" title="Randomize"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/><circle cx="16" cy="16" r="1.3" fill="currentColor"/><circle cx="16" cy="8" r="1.3" fill="currentColor"/><circle cx="8" cy="16" r="1.3" fill="currentColor"/></svg></button>
+      <button id="reset" class="mini" title="Reset"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/></svg></button>
+    </div>
+    <div id="groups"></div>
+    <div class="foot">The film is a deterministic function of time — scrub it, freeze any frame, or deep-link with <b>?t=7.6&amp;play=0</b>.</div>
+  </div>
+
+  <div id="hud">
+    <button id="play" class="btn" title="Play / pause"></button>
+    <button id="replay" class="btn" title="Replay"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7Z"/></svg></button>
+    <span id="t_cur" class="seg">0.0</span>
+    <input id="scrub" type="range" min="0" max="1000" value="0">
+    <span id="t_dur" class="seg">9.2</span>
+    <span id="phase">— <b>idle</b></span>
+  </div>
+
+<script src="./logo-data.js"></script>
+<script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+<script src="https://unpkg.com/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://unpkg.com/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<script>
+"use strict";
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const fail = (m) => { const e=$("err"); e.style.display="grid"; e.innerHTML=m; $("loader").style.display="none"; };
+  if (typeof THREE === "undefined") return fail("Could not load the 3D engine (three.js CDN unreachable).<br>Open this with an internet connection.");
+
+  const TAU = Math.PI*2, PI = Math.PI;
+  const LOGO_R = 16, SAMPLE = 220;
+  const T = { whip:2.7, scatter:3.8, gather:6.1, hold:8.4, loop:9.2 };
+  const DUR = T.loop;
+
+  // ------------------------------------------------------------ parameter schema (orb_forge-style)
+  const GROUPS = [
+    { name:"Whip", items:[
+      { k:"whipForce", lab:"Whip force",  min:0.3, max:2.2, step:0.05, def:1.0 },
+      { k:"whipCrack", lab:"Crack snap",  min:0,   max:3.2, step:0.05, def:1.7 },
+      { k:"whipThick", lab:"Rope body",   min:0.2, max:3,   step:0.05, def:1.1 },
+    ]},
+    { name:"Embers", items:[
+      { k:"count",      lab:"Ember count", min:5000, max:30000, step:1000, def:16000, rebuild:true, fmt:v=>(v/1000)+"k" },
+      { k:"emberSize",  lab:"Ember size",  min:0.35, max:2.6,  step:0.05, def:1.0 },
+      { k:"scatter",    lab:"Scatter",     min:0.4,  max:2.2,  step:0.05, def:1.0 },
+      { k:"turbulence", lab:"Turbulence",  min:0,    max:2.4,  step:0.05, def:1.0 },
+    ]},
+    { name:"Tracers", items:[
+      { k:"tracerCount", lab:"Comet count", min:0,   max:6,    step:1,    def:2, fmt:v=>v|0 },
+      { k:"tracerSpeed", lab:"Travel speed",min:-6,  max:6,    step:0.1,  def:1.4 },
+      { k:"headSize",    lab:"Head size",   min:0.01,max:0.3,  step:0.005,def:0.045 },
+      { k:"tailLength",  lab:"Tail length", min:0.03,max:0.7,  step:0.01, def:0.16 },
+      { k:"tracerGlow",  lab:"Comet glow",  min:0,   max:4,    step:0.05, def:1.2 },
+    ]},
+    { name:"Glow & post", items:[
+      { k:"bloom",      lab:"Bloom",        min:0,   max:2.4,  step:0.05, def:0.9 },
+      { k:"bloomRadius",lab:"Bloom radius", min:0.1, max:1.2,  step:0.02, def:0.5 },
+      { k:"chroma",     lab:"Chromatic ab", min:0,   max:0.024,step:0.001,def:0.005, fmt:v=>v.toFixed(3) },
+      { k:"vignette",   lab:"Vignette",     min:0,   max:1.5,  step:0.02, def:0.55 },
+      { k:"exposure",   lab:"Exposure",     min:0.4, max:2,    step:0.02, def:1.04 },
+      { k:"saturation", lab:"Saturation",   min:0,   max:2,    step:0.02, def:1.14 },
+      { k:"contrast",   lab:"Contrast",     min:0.6, max:1.8,  step:0.02, def:1.06 },
+      { k:"hueShift",   lab:"Hue shift",    min:-180,max:180,  step:1,    def:0, fmt:v=>(v|0)+"°" },
+    ]},
+    { name:"Camera & time", items:[
+      { k:"speed",  lab:"Speed",  min:0.25, max:2,   step:0.05, def:1.0, fmt:v=>v.toFixed(2)+"×" },
+      { k:"drift",  lab:"Drift",  min:0,    max:2.5, step:0.05, def:1.0 },
+      { k:"spin",   lab:"Spin",   min:0,    max:2,   step:0.05, def:0.5 },
+    ]},
+  ];
+  const SPEC = {}; GROUPS.forEach(g=>g.items.forEach(it=>SPEC[it.k]=it));
+  const DEFAULTS = {}; Object.values(SPEC).forEach(it=>DEFAULTS[it.k]=it.def);
+
+  const PRESETS = {
+    "Branded":    { ...DEFAULTS },
+    "Inferno":    { ...DEFAULTS, whipCrack:2.6, emberSize:0.9, count:13000, tracerCount:2, tracerSpeed:2.4,
+                    tracerGlow:1.5, headSize:0.05, tailLength:0.22, bloom:0.85, bloomRadius:0.5, chroma:0.011,
+                    exposure:0.96, saturation:1.3, contrast:1.18, hueShift:-12, turbulence:1.5 },
+    "Ghost lasso":{ ...DEFAULTS, whipForce:0.8, whipThick:0.7, emberSize:0.7, count:11000, tracerCount:1,
+                    tracerSpeed:-1.0, headSize:0.04, tailLength:0.6, tracerGlow:1.4, bloom:0.6, bloomRadius:0.8,
+                    chroma:0.012, vignette:1.0, exposure:1.0, saturation:0.55, contrast:1.0, hueShift:18,
+                    speed:0.7, scatter:1.4 },
+    "Plasma":     { ...DEFAULTS, whipForce:1.3, tracerCount:3, tracerSpeed:3.6, headSize:0.04, tailLength:0.18,
+                    tracerGlow:1.4, emberSize:0.85, count:13000, bloom:0.7, bloomRadius:0.5, chroma:0.014,
+                    exposure:0.92, saturation:1.25, contrast:1.1, hueShift:150, turbulence:1.6, spin:1.1 },
+    "Supernova":  { ...DEFAULTS, whipForce:1.7, whipCrack:2.8, emberSize:1.4, count:12000, tracerCount:3,
+                    tracerSpeed:3.0, headSize:0.05, tailLength:0.3, tracerGlow:1.6, bloom:0.95, bloomRadius:0.85,
+                    chroma:0.01, vignette:0.4, exposure:0.94, saturation:1.2, contrast:1.1, hueShift:6,
+                    turbulence:1.8, spin:1.2, drift:1.6 },
+    "Hairline":   { ...DEFAULTS, whipThick:0.45, emberSize:0.5, count:9000, tracerCount:2, tracerSpeed:1.0,
+                    headSize:0.03, tailLength:0.28, tracerGlow:1.6, bloom:0.55, bloomRadius:0.45, chroma:0.003,
+                    vignette:0.7, exposure:1.0, saturation:1.05, speed:0.85, spin:0.3 },
+  };
+
+  let P = { ...DEFAULTS };
+  try { const s=localStorage.getItem("lasso.params"); if(s) P={...P, ...JSON.parse(s)}; } catch(e){}
+
+  // ------------------------------------------------------------ easing / hash
+  const easeOut=x=>1-Math.pow(1-x,3), easeIO=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+  const easeInBack=x=>1.9*x*x*x-0.9*x*x, clamp01=x=>x<0?0:x>1?1:x, lerp=(a,b,t)=>a+(b-a)*t;
+  function rnd(i,salt){ const x=Math.sin(i*12.9898+salt*78.233)*43758.5453; return x-Math.floor(x); }
+
+  // ------------------------------------------------------------ renderer / scene
+  const canvas=$("scene");
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+  renderer.setClearColor(0x07060c,1);
+  const scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0x07060c,0.011);
+  const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,0.1,600);
+  camera.position.set(0,0,58);
+
+  function discTexture(){
+    const s=64,c=document.createElement("canvas");c.width=c.height=s;
+    const x=c.getContext("2d"),g=x.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);
+    g.addColorStop(0,"rgba(255,255,255,1)");g.addColorStop(.35,"rgba(255,255,255,.7)");
+    g.addColorStop(1,"rgba(255,255,255,0)");x.fillStyle=g;x.fillRect(0,0,s,s);
+    return new THREE.CanvasTexture(c);
+  }
+  const DISC=discTexture();
+
+  (function stars(){
+    const N=1700,g=new THREE.BufferGeometry(),p=new Float32Array(N*3),col=new Float32Array(N*3);
+    for(let i=0;i<N;i++){
+      const r=120+Math.random()*260,th=Math.random()*TAU,ph=Math.acos(2*Math.random()-1);
+      p[i*3]=r*Math.sin(ph)*Math.cos(th);p[i*3+1]=r*Math.sin(ph)*Math.sin(th);p[i*3+2]=-40-Math.random()*340;
+      const w=.5+Math.random()*.5,warm=Math.random()<.25;
+      col[i*3]=w;col[i*3+1]=w*(warm?.75:.85);col[i*3+2]=w*(warm?.6:1);
+    }
+    g.setAttribute("position",new THREE.BufferAttribute(p,3));
+    g.setAttribute("color",new THREE.BufferAttribute(col,3));
+    const m=new THREE.PointsMaterial({size:1.1,map:DISC,transparent:true,vertexColors:true,
+      depthWrite:false,blending:THREE.AdditiveBlending,sizeAttenuation:true,opacity:.9});
+    const pts=new THREE.Points(g,m);pts.name="stars";scene.add(pts);
+  })();
+  (function nebula(){
+    const g=new THREE.PlaneGeometry(640,640);
+    const m=new THREE.ShaderMaterial({transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
+      uniforms:{uT:{value:0}},
+      vertexShader:`varying vec2 v;void main(){v=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+      fragmentShader:`varying vec2 v;uniform float uT;
+        void main(){vec2 d=v-vec2(.5);float r=length(d*vec2(1.0,1.15));
+          float haze=smoothstep(.62,.06,r)*0.12;
+          float core=smoothstep(.22,.0,r)*0.05*(0.6+0.4*sin(uT*0.6));
+          vec3 c=vec3(1.0,0.41,0.06)*(haze+core);
+          gl_FragColor=vec4(c,(haze+core)*0.9);}`});
+    const pl=new THREE.Mesh(g,m);pl.position.z=-120;pl.name="neb";scene.add(pl);
+  })();
+
+  // ------------------------------------------------------------ lasso spine (ordered centreline for tracers)
+  // hand-authored figure-eight + tail that roughly traces the mark; embers project onto it for path order.
+  const SPINE=(function(){
+    const pts=[]; const push=(x,y)=>pts.push([x,y]);
+    const M=70;
+    for(let i=0;i<M;i++){const a=i/M*TAU - 2.2; push(-5.6+5.4*Math.cos(a), -4.6+5.4*Math.sin(a));}     // lower-left loop
+    for(let i=0;i<10;i++){const t=i/10; push(lerp(-0.6,0.2,t), lerp(0.6,1.4,t));}                        // knot transit
+    for(let i=0;i<M;i++){const a=i/M*TAU - 3.6; push(5.4+5.4*Math.cos(a), 6.2+5.4*Math.sin(a));}         // upper-right loop
+    for(let i=0;i<22;i++){const t=i/22; push(lerp(0.6,10.5,t), lerp(0.8,-9.0,t*t*0.8+t*0.2));}           // tail
+    return pts;
+  })();
+  function projectU(x,y){
+    let best=1e9,bi=0;
+    for(let i=0;i<SPINE.length;i++){const dx=x-SPINE[i][0],dy=y-SPINE[i][1],d=dx*dx+dy*dy;if(d<best){best=d;bi=i;}}
+    return bi/(SPINE.length-1);
+  }
+
+  // ------------------------------------------------------------ logo sampling
+  function sampleLogo(img){
+    const c=document.createElement("canvas");c.width=c.height=SAMPLE;
+    const x=c.getContext("2d");x.drawImage(img,0,0,SAMPLE,SAMPLE);
+    const data=x.getImageData(0,0,SAMPLE,SAMPLE).data;
+    const pts=[];const want=34000;let guard=0;
+    while(pts.length<want && guard<want*40){
+      guard++;
+      const px=(Math.random()*SAMPLE)|0,py=(Math.random()*SAMPLE)|0,k=(py*SAMPLE+px)*4;
+      const r=data[k]/255,g=data[k+1]/255,b=data[k+2]/255,lum=0.299*r+0.587*g+0.114*b;
+      if(lum<0.18) continue; if(Math.random()>lum*lum) continue;
+      const wx=(px/SAMPLE-0.5)*2*LOGO_R, wy=-(py/SAMPLE-0.5)*2*LOGO_R, wz=(Math.random()-0.5)*(1.4+lum*2.2);
+      pts.push([wx,wy,wz, Math.min(1,r*1.02+0.06), g*0.7, b*0.45, lum]);
+    }
+    return pts;
+  }
+
+  let particles=null,geo=null,mat=null,posAttr=null,alphaAttr=null,heatAttr=null,A={};
+
+  function buildParticles(samples,N){
+    if(particles){scene.remove(particles);geo.dispose();mat.dispose();}
+    const pos=new Float32Array(N*3),col=new Float32Array(N*3),siz=new Float32Array(N),
+          alp=new Float32Array(N),heat=new Float32Array(N);
+    A={ lx:new Float32Array(N),ly:new Float32Array(N),lz:new Float32Array(N),
+        sx:new Float32Array(N),sy:new Float32Array(N),sz:new Float32Array(N),
+        s:new Float32Array(N),u:new Float32Array(N),d:new Float32Array(N),tw:new Float32Array(N) };
+    for(let i=0;i<N;i++){
+      const smp=samples[(Math.random()*samples.length)|0];
+      A.lx[i]=smp[0];A.ly[i]=smp[1];A.lz[i]=smp[2];
+      A.u[i]=projectU(smp[0],smp[1]);
+      col[i*3]=smp[3];col[i*3+1]=smp[4];col[i*3+2]=smp[5];
+      siz[i]=(0.32+rnd(i,3)*1.05)*(0.6+smp[6]*0.8);
+      A.s[i]=i/N;
+      const th=rnd(i,1)*TAU,ph=Math.acos(2*rnd(i,2)-1),rr=26+rnd(i,5)*30;
+      A.sx[i]=Math.sin(ph)*Math.cos(th)*rr;A.sy[i]=Math.sin(ph)*Math.sin(th)*rr*0.8;A.sz[i]=Math.cos(ph)*rr*0.7-6;
+      A.d[i]=rnd(i,7);A.tw[i]=rnd(i,9)*TAU;
+    }
+    geo=new THREE.BufferGeometry();
+    posAttr=new THREE.BufferAttribute(pos,3);posAttr.setUsage(THREE.DynamicDrawUsage);
+    alphaAttr=new THREE.BufferAttribute(alp,1);alphaAttr.setUsage(THREE.DynamicDrawUsage);
+    heatAttr=new THREE.BufferAttribute(heat,1);heatAttr.setUsage(THREE.DynamicDrawUsage);
+    geo.setAttribute("position",posAttr);
+    geo.setAttribute("aColor",new THREE.BufferAttribute(col,3));
+    geo.setAttribute("aSize",new THREE.BufferAttribute(siz,1));
+    geo.setAttribute("aAlpha",alphaAttr);
+    geo.setAttribute("aHeat",heatAttr);
+    mat=new THREE.ShaderMaterial({
+      transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
+      uniforms:{ uScale:{value:innerHeight*0.5}, uTex:{value:DISC},
+                 uSizeMul:{value:P.emberSize}, uHeadBulge:{value:0.9}, uTracerGlow:{value:P.tracerGlow} },
+      vertexShader:`
+        attribute vec3 aColor;attribute float aSize;attribute float aAlpha;attribute float aHeat;
+        uniform float uScale,uSizeMul,uHeadBulge;
+        varying vec3 vC;varying float vA;varying float vH;
+        void main(){ vC=aColor;vA=aAlpha;vH=aHeat;
+          float bulge=1.0+clamp(aHeat,0.0,1.0)*uHeadBulge;
+          vec4 mv=modelViewMatrix*vec4(position,1.0);
+          gl_PointSize=aSize*uSizeMul*uScale/(-mv.z)*bulge;
+          gl_Position=projectionMatrix*mv; }`,
+      fragmentShader:`
+        precision mediump float;uniform sampler2D uTex;uniform float uTracerGlow;
+        varying vec3 vC;varying float vA;varying float vH;
+        void main(){ float a=texture2D(uTex,gl_PointCoord).a; if(a<0.02) discard;
+          // hot ember tone: bright yellow-orange, NOT white — preserves the brand even on the comet's nucleus
+          float h=clamp(vH,0.0,1.0);
+          vec3 hot=mix(vC, vec3(1.0, 0.78, 0.32), h*0.55);
+          float al=a*(vA*0.5 + h*uTracerGlow*0.18);
+          gl_FragColor=vec4(hot, al); }`
+    });
+    particles=new THREE.Points(geo,mat);particles.name="rope";scene.add(particles);
+  }
+
+  // ------------------------------------------------------------ whip curve
+  const _w=[0,0,0];
+  function whip(i,s,p,out){
+    const W=P.whipForce;
+    const hx=lerp(-LOGO_R*2.7,LOGO_R*1.4,easeIO(p));
+    const hy=Math.sin(p*PI)*LOGO_R*0.5+LOGO_R*0.15;
+    const hz=lerp(-LOGO_R*1.4,LOGO_R*1.2,p);
+    const along=s*LOGO_R*3.1, baseX=hx-along*0.62;
+    const crack=1.0+P.whipCrack*Math.exp(-Math.pow((p-0.62)/0.14,2));
+    const amp=Math.pow(s,1.6)*LOGO_R*0.85*W*crack;
+    const ph=s*TAU*1.7-p*TAU*2.2;
+    const wy=amp*Math.sin(ph), wz=amp*0.7*Math.cos(ph);
+    const loop=clamp01((s-0.5)/0.5), la=s*TAU*1.4-p*TAU*1.1, lr=loop*loop*LOGO_R*0.7*W;
+    const j=0.6*P.whipThick, jx=(rnd(i,11)-0.5)*j, jy=(rnd(i,12)-0.5)*j, jz=(rnd(i,13)-0.5)*j;
+    out[0]=baseX+lr*Math.cos(la)+jx; out[1]=hy+wy+lr*Math.sin(la)+jy; out[2]=hz+wz+jz;
+  }
+
+  // ------------------------------------------------------------ tracer comet heat
+  function cometHeat(pParam,t){
+    const n=P.tracerCount|0; if(n<=0) return 0;
+    const dir=P.tracerSpeed>=0?1:-1, hs=P.headSize, tl=P.tailLength;
+    let h=0;
+    for(let c=0;c<n;c++){
+      const head=((t*P.tracerSpeed + c/n)%1+1)%1;
+      let sd=pParam-head; sd-=Math.round(sd);        // wrap to [-0.5,0.5]
+      const fwd=sd*dir;                               // >0 = trailing behind head
+      const nuc=Math.exp(-(sd*sd)/(hs*hs*0.5+1e-5));
+      let tail=0;
+      if(fwd>0){ tail=Math.exp(-fwd/Math.max(tl,0.02))*(1-clamp01(fwd/0.5)); }
+      const v=nuc+tail*0.85; if(v>h)h=v;
+    }
+    return h;
+  }
+
+  // ------------------------------------------------------------ per-frame evaluation
+  function evaluate(t){
+    const N=P.count, pos=posAttr.array, alp=alphaAttr.array, hot=heatAttr.array;
+    // tracer envelope: subtle on the whip (rope must still read orange), off in space,
+    // ramps to full as the mark forms, then fades during the dissolve
+    let env;
+    if(t<T.whip) env=clamp01((t-0.3)/0.8)*0.35;          // capped: streak across rope, don't replace it
+    else if(t<T.scatter) env=0;
+    else if(t<T.gather) env=clamp01((t-T.gather+1.4)/1.4)*0.85;
+    else if(t<T.hold) env=0.85;
+    else env=0.85*(1-clamp01((t-T.hold)/(T.loop-T.hold)));
+    const turb=P.turbulence;
+
+    for(let i=0;i<N;i++){
+      const s=A.s[i]; let X,Y,Z,al,pParam;
+      if(t<T.whip){
+        const p=t/T.whip; whip(i,s,p,_w); X=_w[0];Y=_w[1];Z=_w[2];
+        al=clamp01(p/0.12)*(0.55+0.45*s); pParam=s;
+      } else if(t<T.scatter){
+        const lt=easeOut((t-T.whip)/(T.scatter-T.whip)); whip(i,s,1,_w);
+        X=lerp(_w[0],A.sx[i],lt);Y=lerp(_w[1],A.sy[i],lt);Z=lerp(_w[2],A.sz[i],lt);
+        if(turb>0){const a=t*1.6+A.tw[i],e=Math.sin(lt*PI)*turb*3.2;
+          X+=Math.sin(a)*e;Y+=Math.cos(a*1.1)*e;Z+=Math.sin(a*1.3)*e*0.7;}
+        al=0.9-0.45*lt; pParam=0;
+      } else if(t<T.gather){
+        const g0=(t-T.scatter)/(T.gather-T.scatter), dl=A.d[i]*0.42, lt=easeIO(clamp01((g0-dl)/(1-dl)));
+        X=lerp(A.sx[i],A.lx[i],lt);Y=lerp(A.sy[i],A.ly[i],lt);Z=lerp(A.sz[i],A.lz[i],lt);
+        al=lerp(0.45,1.0,lt); pParam=A.u[i];
+      } else if(t<T.hold){
+        const h=t-T.gather, br=0.78+0.22*Math.sin(h*2.4+A.tw[i]), pu=1+0.012*Math.sin(h*1.3);
+        X=A.lx[i]*pu;Y=A.ly[i]*pu;Z=A.lz[i]*pu; al=br; pParam=A.u[i];
+      } else {
+        const k=clamp01((t-T.hold)/(T.loop-T.hold)), lt=easeInBack(k); whip(i,s,0,_w);
+        X=lerp(A.lx[i],_w[0],lt);Y=lerp(A.ly[i],_w[1],lt);Z=lerp(A.lz[i],_w[2],lt); al=1-k; pParam=A.u[i];
+      }
+      pos[i*3]=X;pos[i*3+1]=Y;pos[i*3+2]=Z; alp[i]=al;
+      hot[i]= env>0 ? cometHeat(pParam,t)*env : 0;
+    }
+    posAttr.needsUpdate=true; alphaAttr.needsUpdate=true; heatAttr.needsUpdate=true;
+
+    const rotE=(t>=T.gather)?clamp01((t-T.gather)/1.2):0, sp=P.spin;
+    particles.rotation.y=Math.sin(t*0.25)*0.18*sp*rotE;
+    particles.rotation.x=Math.sin(t*0.19+1)*0.07*sp*rotE;
+    camera.position.x=Math.sin(t*0.16)*2.2*P.drift;
+    camera.position.y=Math.cos(t*0.13)*1.4*P.drift;
+    camera.lookAt(0,0,0);
+    document.body.classList.toggle("lit", t>=T.gather-0.3 && t<T.hold+0.2);
+  }
+  const phaseName=t=> t<T.whip?["whipping","WHIP"]:t<T.scatter?["shattering","BURST"]:
+        t<T.gather?["gathering","SWARM"]:t<T.hold?["holding","MARK"]:["dissolving","LOOP"];
+
+  // ------------------------------------------------------------ post: bloom + colour grade
+  let composer=null,bloom=null,grade=null;
+  const GradeShader={
+    uniforms:{ tDiffuse:{value:null}, uChroma:{value:P.chroma}, uVignette:{value:P.vignette},
+               uExposure:{value:P.exposure}, uSaturation:{value:P.saturation}, uContrast:{value:P.contrast}, uHue:{value:0} },
+    vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+    fragmentShader:`
+      varying vec2 vUv;uniform sampler2D tDiffuse;
+      uniform float uChroma,uVignette,uExposure,uSaturation,uContrast,uHue;
+      vec3 hueRot(vec3 c,float a){vec3 k=vec3(0.57735);float cs=cos(a);
+        return c*cs+cross(k,c)*sin(a)+k*dot(k,c)*(1.0-cs);}
+      void main(){ vec2 d=vUv-0.5; float r=length(d); vec2 dir=d*uChroma*(0.4+r);
+        vec3 col=vec3(texture2D(tDiffuse,vUv+dir).r, texture2D(tDiffuse,vUv).g, texture2D(tDiffuse,vUv-dir).b);
+        col*=uExposure;
+        float l=dot(col,vec3(0.299,0.587,0.114)); col=mix(vec3(l),col,uSaturation);
+        col=(col-0.5)*uContrast+0.5; col=hueRot(max(col,0.0),uHue);
+        col*=1.0-uVignette*smoothstep(0.4,0.98,r);
+        gl_FragColor=vec4(max(col,0.0),1.0); }`
+  };
+  function buildComposer(){
+    if(typeof THREE.EffectComposer!=="function"||typeof THREE.UnrealBloomPass!=="function"){composer=null;return;}
+    composer=new THREE.EffectComposer(renderer);
+    composer.addPass(new THREE.RenderPass(scene,camera));
+    bloom=new THREE.UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),P.bloom,P.bloomRadius,0.5);
+    composer.addPass(bloom);
+    grade=new THREE.ShaderPass(GradeShader); grade.renderToScreen=true; composer.addPass(grade);
+  }
+  function syncUniforms(){
+    if(mat){mat.uniforms.uSizeMul.value=P.emberSize;mat.uniforms.uTracerGlow.value=P.tracerGlow;}
+    if(bloom){bloom.strength=P.bloom;bloom.radius=P.bloomRadius;}
+    if(grade){const g=grade.uniforms;g.uChroma.value=P.chroma;g.uVignette.value=P.vignette;
+      g.uExposure.value=P.exposure;g.uSaturation.value=P.saturation;g.uContrast.value=P.contrast;
+      g.uHue.value=P.hueShift*PI/180;}
+  }
+
+  // ------------------------------------------------------------ transport
+  let playing=true,t=0,last=performance.now();
+  const SCRUB_MAX=1000;
+  const PLAY_SVG=`<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
+  const PAUSE_SVG=`<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>`;
+  function setPlay(v){playing=v;$("play").innerHTML=v?PAUSE_SVG:PLAY_SVG;}
+  function persist(){try{localStorage.setItem("lasso.t",t.toFixed(3));localStorage.setItem("lasso.play",playing?"1":"0");
+    localStorage.setItem("lasso.params",JSON.stringify(P));}catch(e){}}
+  (function restore(){try{const s=localStorage.getItem("lasso.t");if(s!=null)t=Math.max(0,Math.min(DUR,parseFloat(s)));
+    if(localStorage.getItem("lasso.play")==="0")playing=false;}catch(e){}
+    const q=new URLSearchParams(location.search);
+    if(q.has("t")){const v=parseFloat(q.get("t"));if(!isNaN(v))t=Math.max(0,Math.min(DUR,v));}
+    if(q.get("play")==="0")playing=false;
+    if(q.has("preset")&&PRESETS[q.get("preset")])P={...P,...PRESETS[q.get("preset")]};
+    if(q.get("ui")==="1") document.body.classList.add("ui");
+  })();
+
+  function syncHUD(){
+    const f=t/DUR;$("scrub").value=(f*SCRUB_MAX)|0;
+    $("scrub").style.background=`linear-gradient(90deg,var(--sunset) ${f*100}%,rgba(255,255,255,.14) ${f*100}%)`;
+    $("t_cur").textContent=t.toFixed(1);$("t_dur").textContent=DUR.toFixed(1);
+    const [lo,hi]=phaseName(t);$("phase").innerHTML=`${lo} · <b>${hi}</b>`;
+  }
+  function frame(now){
+    const dt=Math.min(0.05,(now-last)/1000);last=now;
+    if(playing){t+=dt*P.speed;if(t>=DUR)t-=DUR;}
+    scene.getObjectByName("neb").material.uniforms.uT.value=t;
+    scene.getObjectByName("stars").rotation.z=now*0.000012;
+    evaluate(t);
+    composer?composer.render():renderer.render(scene,camera);
+    syncHUD();
+    requestAnimationFrame(frame);
+  }
+
+  // ------------------------------------------------------------ param rack UI
+  function fmtVal(it,v){ return it.fmt?it.fmt(v):(Math.abs(v)<1?v.toFixed(3):v.toFixed(2)); }
+  function buildRack(){
+    const root=$("groups"); root.innerHTML="";
+    GROUPS.forEach(g=>{
+      const gd=document.createElement("div");gd.className="grp";
+      gd.innerHTML=`<h4>${g.name}</h4>`;
+      g.items.forEach(it=>{
+        const row=document.createElement("div");row.className="row";
+        row.innerHTML=`<div class="lab"><span class="nm">${it.lab}</span><span class="vl" id="vl_${it.k}">${fmtVal(it,P[it.k])}</span></div>
+          <input id="in_${it.k}" type="range" min="${it.min}" max="${it.max}" step="${it.step}" value="${P[it.k]}">`;
+        gd.appendChild(row);
+      });
+      root.appendChild(gd);
+    });
+    Object.values(SPEC).forEach(it=>{
+      const el=$("in_"+it.k);
+      el.addEventListener("input",()=>{
+        const v=parseFloat(el.value); P[it.k]=v; $("vl_"+it.k).textContent=fmtVal(it,v);
+        if(it.rebuild){clearTimeout(rebuildTimer);rebuildTimer=setTimeout(()=>buildParticles(window.__samples,P.count|0),160);}
+        else syncUniforms();
+        persist();
+      });
+    });
+    const sel=$("preset"); sel.innerHTML=`<option value="">— look —</option>`+
+      Object.keys(PRESETS).map(n=>`<option value="${n}">${n}</option>`).join("");
+  }
+  let rebuildTimer=null;
+  function applyParams(){ // push P → sliders + uniforms + (rebuild if count changed)
+    Object.values(SPEC).forEach(it=>{const el=$("in_"+it.k);if(el){el.value=P[it.k];$("vl_"+it.k).textContent=fmtVal(it,P[it.k]);}});
+    syncUniforms();
+  }
+  function applyPreset(name){
+    const need=(P.count|0)!==((PRESETS[name].count|0));
+    P={...P,...PRESETS[name]}; applyParams();
+    if(need)buildParticles(window.__samples,P.count|0);
+    persist();
+  }
+
+  // ------------------------------------------------------------ wire
+  $("play").innerHTML=PAUSE_SVG;
+  $("play").onclick=()=>{setPlay(!playing);persist();};
+  $("replay").onclick=()=>{t=0;setPlay(true);persist();};
+  $("scrub").oninput=e=>{t=(e.target.value/SCRUB_MAX)*DUR;setPlay(false);persist();};
+  document.addEventListener("keydown",e=>{
+    if(e.target.tagName==="INPUT"||e.target.tagName==="SELECT")return;
+    if(e.code==="Space"){e.preventDefault();setPlay(!playing);}
+    else if(e.code==="ArrowRight"){t=Math.min(DUR,t+0.1);setPlay(false);}
+    else if(e.code==="ArrowLeft"){t=Math.max(0,t-0.1);setPlay(false);} });
+  $("gear").onclick=()=>$("rack").classList.toggle("open");
+  $("preset").onchange=e=>{if(e.target.value)applyPreset(e.target.value);};
+  $("reset").onclick=()=>{P={...DEFAULTS};applyParams();buildParticles(window.__samples,P.count|0);$("preset").value="";persist();};
+  $("rand").onclick=()=>{ Object.values(SPEC).forEach(it=>{ if(it.k==="count")return;
+      P[it.k]=Math.round((it.min+Math.random()*(it.max-it.min))/it.step)*it.step; });
+    applyParams();$("preset").value="";persist(); };
+
+  function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+    renderer.setPixelRatio(Math.min(2,devicePixelRatio));renderer.setSize(innerWidth,innerHeight);
+    if(composer)composer.setSize(innerWidth,innerHeight);
+    if(mat)mat.uniforms.uScale.value=innerHeight*0.5;}
+  addEventListener("resize",resize);
+
+  // ------------------------------------------------------------ boot
+  const img=new Image();
+  img.onload=()=>{
+    window.__samples=sampleLogo(img);
+    buildParticles(window.__samples,P.count|0);
+    buildRack(); buildComposer(); syncUniforms(); resize(); setPlay(playing);
+    $("loader").style.opacity="0";setTimeout(()=>$("loader").style.display="none",600);
+    last=performance.now();requestAnimationFrame(frame);
+  };
+  img.onerror=()=>fail("Could not load the logo image data (logo-data.js).");
+  if(!window.LOGO_DATA_URI)return fail("logo-data.js did not define the logo image.");
+  img.src=window.LOGO_DATA_URI;
+})();
+</script>
+</body>
+</html>
