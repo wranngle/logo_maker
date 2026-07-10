@@ -13,12 +13,17 @@ emitEcsEventOnStderr(){ local lvl=$1 act=$2 out=$3 err=${4:-} detail=${5:-} ts
 tapeFilePath=${1:-demo/cassette.tape}
 [[ -f $tapeFilePath ]]||{ emitEcsEventOnStderr error hero.tape-missing failure "tape not found: $tapeFilePath";exit 1;}
 emitEcsEventOnStderr info hero.start success '' "tape=$tapeFilePath"
+# The VHS image ships no bun; mount the host binary so the tape's real
+# `bun run generate` executes for real inside the recording.
+bunBinaryPath=$(command -v bun||true)
+[[ -n $bunBinaryPath ]]||bunBinaryPath=$HOME/.bun/bin/bun
+[[ -x $bunBinaryPath ]]||{ emitEcsEventOnStderr error hero.bun-missing failure "no bun binary to mount (looked at PATH and $HOME/.bun/bin/bun)";exit 1;}
 mkdir -p demo
-docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/vhs" ghcr.io/charmbracelet/vhs "$tapeFilePath"||{ emitEcsEventOnStderr error hero.vhs-failed failure 'vhs render exited nonzero';exit 1;}
+docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD:/vhs" -v "$bunBinaryPath:/usr/local/bin/bun:ro" ghcr.io/charmbracelet/vhs "$tapeFilePath"||{ emitEcsEventOnStderr error hero.vhs-failed failure 'vhs render exited nonzero';exit 1;}
 rawRenderedGif=demo/cassette.gif
 [[ -f $rawRenderedGif ]]||{ emitEcsEventOnStderr error hero.no-gif failure "vhs produced no $rawRenderedGif";exit 1;}
-ffmpeg -y -i "$rawRenderedGif" -vf "fps=10,scale=720:-1:flags=lanczos" -loop 0 demo/hero.gif 2>/dev/null||{ emitEcsEventOnStderr error hero.ffmpeg-gif-failed failure 'ffmpeg gif optimization failed';exit 1;}
-ffmpeg -y -i "$rawRenderedGif" -vcodec libwebp -lossless 0 -q:v 70 -loop 0 -an demo/hero.webp 2>/dev/null||{ emitEcsEventOnStderr error hero.ffmpeg-webp-failed failure 'ffmpeg webp encoding failed';exit 1;}
+ffmpeg -y -i "$rawRenderedGif" -vf "fps=10,scale=720:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" -loop 0 demo/hero.gif 2>/dev/null||{ emitEcsEventOnStderr error hero.ffmpeg-gif-failed failure 'ffmpeg gif optimization failed';exit 1;}
+ffmpeg -y -i "$rawRenderedGif" -vf "fps=10,scale=720:-1:flags=lanczos" -vcodec libwebp -lossless 0 -q:v 70 -loop 0 -an demo/hero.webp 2>/dev/null||{ emitEcsEventOnStderr error hero.ffmpeg-webp-failed failure 'ffmpeg webp encoding failed';exit 1;}
 gifByteSize=$(stat -c%s demo/hero.gif 2>/dev/null||stat -f%z demo/hero.gif)
 webpByteSize=$(stat -c%s demo/hero.webp 2>/dev/null||stat -f%z demo/hero.webp)
 emitEcsEventOnStderr info hero.complete success '' "gif=${gifByteSize}b webp=${webpByteSize}b"

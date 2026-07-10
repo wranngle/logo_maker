@@ -1,6 +1,6 @@
 # logo_maker
 
-![hero](docs/hero.png)
+![terminal recording: bun run generate builds favicons, a web manifest, and social assets from one source file, then a find listing shows the output tree](demo/hero.gif)
 
 Generate Wranngle favicon, web manifest, and social preview assets from one PNG
 or SVG source.

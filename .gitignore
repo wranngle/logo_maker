@@ -75,3 +75,7 @@ output/
 
 # git_good runtime (per dotfiles doctrine)
 .artifacts/
+
+# hero pipeline: keep optimized outputs, ignore the raw VHS render
+!demo/hero.webp
+demo/cassette.gif
