@@ -85,3 +85,7 @@ WORKFLOW.md
 bin/symphony
 .symphony/
 .automation/
+
+# committed README brand media (exception to the global *.png ignore)
+!docs/brand/*.png
+!docs/brand/variations/*.png
