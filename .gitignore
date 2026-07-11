@@ -79,3 +79,9 @@ output/
 # hero pipeline: keep optimized outputs, ignore the raw VHS render
 !demo/hero.webp
 demo/cassette.gif
+
+# internal orchestration machinery (never public)
+WORKFLOW.md
+bin/symphony
+.symphony/
+.automation/
