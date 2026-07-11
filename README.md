@@ -5,7 +5,7 @@
   <img alt="logo_maker" src="docs/brand/wordmark-light.png" width="30%">
 </picture>
 
-*Self-generated: `bun run generate -- variations "Wranngle" --color ff5f00`*
+*Made with itself.*
 
 #### favicons · web manifest · palette extraction · identity kit · logo variations · OG cards
 
