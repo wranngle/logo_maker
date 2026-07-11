@@ -41,7 +41,7 @@ jobs:
           set -euo pipefail
           shopt -s nullglob globstar
           pip install --quiet yamllint
-          files=(.github/**/*.yml .github/**/*.yaml .automation/*.json .agents/*.yml .agents/*.yaml *.yml *.yaml)
+          files=(.github/**/*.yml .github/**/*.yaml .agents/*.yml .agents/*.yaml *.yml *.yaml)
           [[ ${#files[@]} -eq 0 ]] && { echo "no yaml files - skipping"; exit 0; }
           yamllint -d "{extends: default, rules: {line-length: disable, document-start: disable, truthy: {check-keys: false}}}" "${files[@]}"
 

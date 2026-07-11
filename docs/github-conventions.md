@@ -1,17 +1,18 @@
 # GitHub Conventions
 
-This repo uses small issue forms, focused pull requests, and Bun-backed CI.
+This repo uses plain issues, focused pull requests, and Bun-backed CI.
 
 ## Issues
 
-Use one of the shipped forms:
+File issues with `gh issue create` (or the web form). Keep the shape simple:
 
 - Bug: existing behavior is wrong.
 - Feature: a concrete user-facing or maintainer-facing improvement.
 - Research: a time-boxed decision or spike.
 
-Each issue includes an Area field. The triage workflow reads that field and
-applies the matching `a/<area>` label when the label exists.
+An issue may include an `### Area` heading followed by a value. The triage
+workflow reads that field and applies the matching `a/<area>` label when the
+label exists.
 
 ## Pull Requests
 
